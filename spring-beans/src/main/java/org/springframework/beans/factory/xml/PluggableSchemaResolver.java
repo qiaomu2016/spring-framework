@@ -69,9 +69,15 @@ public class PluggableSchemaResolver implements EntityResolver {
 	@Nullable
 	private final ClassLoader classLoader;
 
+	/**
+	 *  Schema 文件地址
+	 */
 	private final String schemaMappingsLocation;
 
-	/** Stores the mapping of schema URL -> local schema path. */
+	/**
+	 * namespaceURI 与 Schema 文件地址的映射集合
+	 * Stores the mapping of schema URL -> local schema path.
+	 */
 	@Nullable
 	private volatile Map<String, String> schemaMappings;
 
@@ -112,15 +118,29 @@ public class PluggableSchemaResolver implements EntityResolver {
 					"] and system id [" + systemId + "]");
 		}
 
+		/*
+		 * ①：XSD 验证模式
+		 * publicId：null
+		 * systemId：http://www.springframework.org/schema/beans/spring-beans.xsd
+		 */
+
 		if (systemId != null) {
+
+			// http://www.springframework.org/schema/beans/spring-beans.xsd=org/springframework/beans/factory/xml/spring-beans.xsd
+			// 获得 Resource 所在位置，如：org/springframework/beans/factory/xml/spring-beans.xsd
 			String resourceLocation = getSchemaMappings().get(systemId);
+
+			// 如果以https:开头，转为以http:开头
 			if (resourceLocation == null && systemId.startsWith("https:")) {
 				// Retrieve canonical http schema mapping even for https declaration
 				resourceLocation = getSchemaMappings().get("http:" + systemId.substring(6));
 			}
+
 			if (resourceLocation != null) {
+				// 根据Schema 文件地址 创建 ClassPathResource
 				Resource resource = new ClassPathResource(resourceLocation, this.classLoader);
 				try {
+					// 创建 InputSource 对象，并设置 publicId、systemId 属性
 					InputSource source = new InputSource(resource.getInputStream());
 					source.setPublicId(publicId);
 					source.setSystemId(systemId);
@@ -146,6 +166,8 @@ public class PluggableSchemaResolver implements EntityResolver {
 	 */
 	private Map<String, String> getSchemaMappings() {
 		Map<String, String> schemaMappings = this.schemaMappings;
+
+		// 双重检查锁，实现 schemaMappings 单例
 		if (schemaMappings == null) {
 			synchronized (this) {
 				schemaMappings = this.schemaMappings;
@@ -154,12 +176,22 @@ public class PluggableSchemaResolver implements EntityResolver {
 						logger.trace("Loading schema mappings from [" + this.schemaMappingsLocation + "]");
 					}
 					try {
+
+						/**
+						 * 加载 "META-INF/spring.schemas" 文件，返回Properties对象
+						 * META-INF/spring.schemas 文件内容如下所示：
+						 * http\://www.springframework.org/schema/beans/spring-beans-4.3.xsd=org/springframework/beans/factory/xml/spring-beans.xsd
+						 * http\://www.springframework.org/schema/beans/spring-beans.xsd=org/springframework/beans/factory/xml/spring-beans.xsd
+						 */
+
 						Properties mappings =
 								PropertiesLoaderUtils.loadAllProperties(this.schemaMappingsLocation, this.classLoader);
 						if (logger.isTraceEnabled()) {
 							logger.trace("Loaded schema mappings: " + mappings);
 						}
 						schemaMappings = new ConcurrentHashMap<>(mappings.size());
+
+						// 将 mappings 合并到 schemaMappings 中
 						CollectionUtils.mergePropertiesIntoMap(mappings, schemaMappings);
 						this.schemaMappings = schemaMappings;
 					}

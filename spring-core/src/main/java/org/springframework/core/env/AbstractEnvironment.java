@@ -235,8 +235,10 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	protected Set<String> doGetActiveProfiles() {
 		synchronized (this.activeProfiles) {
 			if (this.activeProfiles.isEmpty()) {
+				// 获取环境变量：spring.profiles.active 的值
 				String profiles = getProperty(ACTIVE_PROFILES_PROPERTY_NAME);
 				if (StringUtils.hasText(profiles)) {
+					// 根据逗号，分隔profiles 并放到 activeProfiles集合中
 					setActiveProfiles(StringUtils.commaDelimitedListToStringArray(
 							StringUtils.trimAllWhitespace(profiles)));
 				}
@@ -293,8 +295,10 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	protected Set<String> doGetDefaultProfiles() {
 		synchronized (this.defaultProfiles) {
 			if (this.defaultProfiles.equals(getReservedDefaultProfiles())) {
+				// 获取环境变量spring.profiles.default 配置的profile值
 				String profiles = getProperty(DEFAULT_PROFILES_PROPERTY_NAME);
 				if (StringUtils.hasText(profiles)) {
+					// 以逗号分隔，返回的profiles集合 保存至defaultProfiles中
 					setDefaultProfiles(StringUtils.commaDelimitedListToStringArray(
 							StringUtils.trimAllWhitespace(profiles)));
 				}
@@ -328,11 +332,15 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	public boolean acceptsProfiles(String... profiles) {
 		Assert.notEmpty(profiles, "Must specify at least one profile");
 		for (String profile : profiles) {
+			// profile的前缀为非Not操作符（!）
 			if (StringUtils.hasLength(profile) && profile.charAt(0) == '!') {
+				// 去掉非Not操作符（!）进行判断
+				// profile 都不在系统环境变量spring.profiles.active 或 spring.profiles.default，则返回为true
 				if (!isProfileActive(profile.substring(1))) {
 					return true;
 				}
 			}
+			// profile在 系统环境变量spring.profiles.active 或 spring.profiles.default里面，则返回为true
 			else if (isProfileActive(profile)) {
 				return true;
 			}
@@ -353,7 +361,11 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	 */
 	protected boolean isProfileActive(String profile) {
 		validateProfile(profile);
+		// 获取当前有效的profiles（需环境变量：spring.profiles.active 里面配置的值）
 		Set<String> currentActiveProfiles = doGetActiveProfiles();
+
+		// 如果自定义环境配置profile值在 spring.profiles.active的配置里面返回为true
+		// 如果没有配置spring.profiles.active，但profile值在 spring.profiles.default的配置信息里，也返回为true
 		return (currentActiveProfiles.contains(profile) ||
 				(currentActiveProfiles.isEmpty() && doGetDefaultProfiles().contains(profile)));
 	}

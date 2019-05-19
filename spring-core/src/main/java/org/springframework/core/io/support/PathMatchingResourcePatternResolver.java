@@ -65,19 +65,19 @@ import org.springframework.util.StringUtils;
  * {@link org.springframework.util.AntPathMatcher} utility).
  * Both of the latter are effectively wildcards.
  *
- * <p><b>No Wildcards:</b>
+ * <p><b>No Wildcards(通配符):</b>
  *
  * <p>In the simple case, if the specified location path does not start with the
  * {@code "classpath*:}" prefix, and does not contain a PathMatcher pattern,
  * this resolver will simply return a single resource via a
- * {@code getResource()} call on the underlying {@code ResourceLoader}.
+ * {@code getResource()} call on the underlying(底层) {@code ResourceLoader}.
  * Examples are real URLs such as "{@code file:C:/context.xml}", pseudo-URLs
  * such as "{@code classpath:/context.xml}", and simple unprefixed paths
  * such as "{@code /WEB-INF/context.xml}". The latter will resolve in a
  * fashion specific to the underlying {@code ResourceLoader} (e.g.
  * {@code ServletContextResource} for a {@code WebApplicationContext}).
  *
- * <p><b>Ant-style Patterns:</b>
+ * <p><b>Ant-style Patterns:(Ant风格的路径匹配模式)</b>
  *
  * <p>When the path location contains an Ant-style pattern, e.g.:
  * <pre class="code">
@@ -87,7 +87,7 @@ import org.springframework.util.StringUtils;
  * classpath:com/mycompany/**&#47;applicationContext.xml</pre>
  * the resolver follows a more complex but defined procedure to try to resolve
  * the wildcard. It produces a {@code Resource} for the path up to the last
- * non-wildcard segment and obtains a {@code URL} from it. If this URL is
+ * non-wildcard segment(最后一个非通配符段) and obtains a {@code URL} from it. If this URL is
  * not a "{@code jar:}" URL or container-specific variant (e.g.
  * "{@code zip:}" in WebLogic, "{@code wsjar}" in WebSphere", etc.),
  * then a {@code java.io.File} is obtained from it, and used to resolve the
@@ -96,11 +96,11 @@ import org.springframework.util.StringUtils;
  * the jar URL, and then traverses the contents of the jar file, to resolve the
  * wildcards.
  *
- * <p><b>Implications on portability:</b>
+ * <p><b>Implications on portability(可移植性):</b>
  *
- * <p>If the specified path is already a file URL (either explicitly, or
- * implicitly because the base {@code ResourceLoader} is a filesystem one,
- * then wildcarding is guaranteed to work in a completely portable fashion.
+ * <p>If the specified path is already a file URL (either explicitly(明确), or
+ * implicitly(隐式) because the base {@code ResourceLoader} is a filesystem one,
+ * then wildcarding is guaranteed(保证) to work in a completely portable fashion.
  *
  * <p>If the specified path is a classpath location, then the resolver must
  * obtain the last non-wildcard path segment URL via a
@@ -182,6 +182,10 @@ import org.springframework.util.StringUtils;
  */
 public class PathMatchingResourcePatternResolver implements ResourcePatternResolver {
 
+	// PathMatchingResourcePatternResolver ，为 ResourcePatternResolver 最常用的子类，
+	// 它除了支持 ResourceLoader 和 ResourcePatternResolver 新增的 "classpath*:" 前缀外，
+	// 还支持 Ant 风格的路径匹配模式（类似于 "**/*.xml"）
+
 	private static final Log logger = LogFactory.getLog(PathMatchingResourcePatternResolver.class);
 
 	@Nullable
@@ -200,9 +204,15 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 		}
 	}
 
-
+	/**
+	 *  内置的ResourceLoader 资源定位器
+	 *  在实例化的时候，可以指定一个ResourceLoader，如果不指定的话，它会在内部构造一个DefaultResourceLoader
+	 */
 	private final ResourceLoader resourceLoader;
 
+	/**
+	 * Ant路径匹配器
+	 */
 	private PathMatcher pathMatcher = new AntPathMatcher();
 
 
@@ -277,28 +287,35 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	@Override
 	public Resource[] getResources(String locationPattern) throws IOException {
 		Assert.notNull(locationPattern, "Location pattern must not be null");
+		// 通配符模式：以 "classpath*:" 开头
 		if (locationPattern.startsWith(CLASSPATH_ALL_URL_PREFIX)) {
+			// "classpath*:"通匹符模式 + Ant风格模式
 			// a class path resource (multiple resources for same name possible)
 			if (getPathMatcher().isPattern(locationPattern.substring(CLASSPATH_ALL_URL_PREFIX.length()))) {
 				// a class path resource pattern
 				return findPathMatchingResources(locationPattern);
 			}
+			// 仅为"classpath*:"通匹符模式
 			else {
 				// all class path resources with the given name
 				return findAllClassPathResources(locationPattern.substring(CLASSPATH_ALL_URL_PREFIX.length()));
 			}
 		}
+		// 非通配符模式
 		else {
 			// Generally only look for a pattern after a prefix here,
 			// and on Tomcat only after the "*/" separator for its "war:" protocol.
 			int prefixEnd = (locationPattern.startsWith("war:") ? locationPattern.indexOf("*/") + 1 :
 					locationPattern.indexOf(':') + 1);
+			// 非通配符 +　Ant风格模式
 			if (getPathMatcher().isPattern(locationPattern.substring(prefixEnd))) {
 				// a file pattern
 				return findPathMatchingResources(locationPattern);
 			}
+			// 单一资源
 			else {
 				// a single resource with the given name
+				// 调用默认的ResourceLoader获取资源
 				return new Resource[] {getResourceLoader().getResource(locationPattern)};
 			}
 		}
@@ -335,11 +352,14 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	protected Set<Resource> doFindAllClassPathResources(String path) throws IOException {
 		Set<Resource> result = new LinkedHashSet<>(16);
 		ClassLoader cl = getClassLoader();
+		// 根据ClassLoader加载路径下的所有资源
 		Enumeration<URL> resourceUrls = (cl != null ? cl.getResources(path) : ClassLoader.getSystemResources(path));
 		while (resourceUrls.hasMoreElements()) {
 			URL url = resourceUrls.nextElement();
+			// 把URL转换成UrlResource
 			result.add(convertClassLoaderURL(url));
 		}
+		// 加载路径下得所有jar包
 		if ("".equals(path)) {
 			// The above result is likely to be incomplete, i.e. only containing file system references.
 			// We need to have pointers to each of the jar files on the classpath as well...
@@ -489,13 +509,18 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	 * @see org.springframework.util.PathMatcher
 	 */
 	protected Resource[] findPathMatchingResources(String locationPattern) throws IOException {
+		// 获取根目录，eg: Will return "/WEB-INF/" for the pattern "/WEB-INF/*.xml"
 		String rootDirPath = determineRootDir(locationPattern);
+		// 获取子目录
 		String subPattern = locationPattern.substring(rootDirPath.length());
+		// 递归处理
 		Resource[] rootDirResources = getResources(rootDirPath);
 		Set<Resource> result = new LinkedHashSet<>(16);
+		// 循环迭代
 		for (Resource rootDirResource : rootDirResources) {
 			rootDirResource = resolveRootDirResource(rootDirResource);
 			URL rootDirUrl = rootDirResource.getURL();
+			// bundle 资源类型
 			if (equinoxResolveMethod != null && rootDirUrl.getProtocol().startsWith("bundle")) {
 				URL resolvedUrl = (URL) ReflectionUtils.invokeMethod(equinoxResolveMethod, null, rootDirUrl);
 				if (resolvedUrl != null) {
@@ -503,12 +528,16 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 				}
 				rootDirResource = new UrlResource(rootDirUrl);
 			}
+			// vfs 资源类型
 			if (rootDirUrl.getProtocol().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {
 				result.addAll(VfsResourceMatchingDelegate.findMatchingResources(rootDirUrl, subPattern, getPathMatcher()));
 			}
+			// jar协议、zip协议、wsjar协议、vfszip协议
 			else if (ResourceUtils.isJarURL(rootDirUrl) || isJarResource(rootDirResource)) {
+				// 从jar包中找寻相应的所有class文件
 				result.addAll(doFindPathMatchingJarResources(rootDirResource, rootDirUrl, subPattern));
 			}
+			// 其它资源类型
 			else {
 				result.addAll(doFindPathMatchingFileResources(rootDirResource, subPattern));
 			}
@@ -520,11 +549,11 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	}
 
 	/**
-	 * Determine the root directory for the given location.
+	 * Determine(确定) the root directory for the given location.
 	 * <p>Used for determining the starting point for file matching,
 	 * resolving the root directory location to a {@code java.io.File}
 	 * and passing it into {@code retrieveMatchingFiles}, with the
-	 * remainder of the location as pattern.
+	 * remainder(剩余) of the location as pattern.
 	 * <p>Will return "/WEB-INF/" for the pattern "/WEB-INF/*.xml",
 	 * for example.
 	 * @param location the location to check
@@ -532,14 +561,21 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	 * @see #retrieveMatchingFiles
 	 */
 	protected String determineRootDir(String location) {
+		// 找到冒号的后一位
 		int prefixEnd = location.indexOf(':') + 1;
+		// 根目录结束位置
 		int rootDirEnd = location.length();
+		// 在从冒号开始到最后的字符串中，循环判断是否包含通配符，如果包含，则截断最后一个由”/”分割的部分。
+		// eg:
+		// classpath*:test/cc*/spring-*.xml  -> classpath*:test/
+		// classpath*:test/aa/spring-*.xml   -> classpath*:test/aa/
 		while (rootDirEnd > prefixEnd && getPathMatcher().isPattern(location.substring(prefixEnd, rootDirEnd))) {
 			rootDirEnd = location.lastIndexOf('/', rootDirEnd - 2) + 1;
 		}
 		if (rootDirEnd == 0) {
 			rootDirEnd = prefixEnd;
 		}
+		// 截取根目录
 		return location.substring(0, rootDirEnd);
 	}
 
@@ -738,7 +774,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	}
 
 	/**
-	 * Retrieve files that match the given path pattern,
+	 * Retrieve(取回) files that match the given path pattern,
 	 * checking the given directory and its subdirectories.
 	 * @param rootDir the directory to start from
 	 * @param pattern the pattern to match against,
@@ -774,6 +810,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 		}
 		fullPattern = fullPattern + StringUtils.replace(pattern, File.separator, "/");
 		Set<File> result = new LinkedHashSet<>(8);
+		// 递归获取File，放到result结果集中
 		doRetrieveMatchingFiles(fullPattern, rootDir, result);
 		return result;
 	}
@@ -802,9 +839,11 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 					}
 				}
 				else {
+					// 递归调用获取
 					doRetrieveMatchingFiles(fullPattern, content, result);
 				}
 			}
+			// 如果匹配，加到集合中
 			if (getPathMatcher().match(fullPattern, currPath)) {
 				result.add(content);
 			}

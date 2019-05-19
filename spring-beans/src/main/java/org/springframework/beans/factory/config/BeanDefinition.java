@@ -40,6 +40,23 @@ import org.springframework.lang.Nullable;
 public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 
 	/**
+	 * AttributeAccessor 接口:定义了与其它对象的（元数据）进行连接和访问的约定，即对属性的修改，包括获取、设置、删除
+	 * BeanMetadataElement 接口:Bean 元对象持有的配置元素可以通过 #getSource() 方法来获取
+	 *
+	 * BeanDefinition 常用的三个实现类有:
+	 * org.springframework.beans.factory.support.ChildBeanDefinition
+	 * org.springframework.beans.factory.support.RootBeanDefinition
+	 * org.springframework.beans.factory.support.GenericBeanDefinition
+	 *
+	 * ChildBeanDefinition、RootBeanDefinition、GenericBeanDefinition 三者都继承 AbstractBeanDefinition 抽象类，
+	 * 即 AbstractBeanDefinition 对三个子类的共同的类信息进行抽象。
+	 * 如果配置文件中定义了父 <bean> 和 子 <bean> ，则父 <bean> 用 RootBeanDefinition 表示，子 <bean> 用 ChildBeanDefinition 表示，
+	 * 而没有父 <bean> 的就使用RootBeanDefinition 表示。
+	 * GenericBeanDefinition 为一站式服务类。
+	 *
+	 */
+
+	/**
 	 * Scope identifier for the standard singleton scope: "singleton".
 	 * <p>Note that extended bean factories might support further scopes.
 	 * @see #setScope

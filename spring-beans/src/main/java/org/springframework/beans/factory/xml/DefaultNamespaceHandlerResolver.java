@@ -115,24 +115,42 @@ public class DefaultNamespaceHandlerResolver implements NamespaceHandlerResolver
 	@Override
 	@Nullable
 	public NamespaceHandler resolve(String namespaceUri) {
+		// 根据handlerMappingsLocation获取里面的所有key->value对，并放到handlerMappings
+		// eg:
+		// http\://www.springframework.org/schema/mvc=org.springframework.web.servlet.config.MvcNamespaceHandler
 		Map<String, Object> handlerMappings = getHandlerMappings();
+
+		// 获取自定义标签对应的处理类
 		Object handlerOrClassName = handlerMappings.get(namespaceUri);
 		if (handlerOrClassName == null) {
 			return null;
 		}
+		// 如果存在handlerOrClassName，且是NamespaceHandler的实现类,直接返回
 		else if (handlerOrClassName instanceof NamespaceHandler) {
 			return (NamespaceHandler) handlerOrClassName;
 		}
+		// 由于此时handlerOrClassName为String类型，所以上面的条件判断不会执行，
+		// 待该条件执行完成后，会创建NamespaceHandler的一个实例，并放到handlerMappings中
 		else {
 			String className = (String) handlerOrClassName;
 			try {
 				Class<?> handlerClass = ClassUtils.forName(className, this.classLoader);
+
+				// isAssignableFrom()方法是从类继承的角度去判断，instanceof关键字是从实例继承的角度去判断。
+				// isAssignableFrom()方法是判断是否为某个类的父类，instanceof关键字是判断是否某个类的子类。
+				// 父类.class.isAssignableFrom(子类.class)
+
+				// handlerClass必须实现NamespaceHandler接口，否则抛异常
 				if (!NamespaceHandler.class.isAssignableFrom(handlerClass)) {
 					throw new FatalBeanException("Class [" + className + "] for namespace [" + namespaceUri +
 							"] does not implement the [" + NamespaceHandler.class.getName() + "] interface");
 				}
+
+				// 根据handlerClass实例化NamespaceHandler的实现类
 				NamespaceHandler namespaceHandler = (NamespaceHandler) BeanUtils.instantiateClass(handlerClass);
+				// 调用初始化方法
 				namespaceHandler.init();
+				// 把实例化的namespaceHandler加载到handlerMappings中
 				handlerMappings.put(namespaceUri, namespaceHandler);
 				return namespaceHandler;
 			}

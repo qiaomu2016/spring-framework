@@ -160,6 +160,9 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 
 	private final Map<String, AutowireCandidateQualifier> qualifiers = new LinkedHashMap<>();
 
+	/**
+	 * 创建 Bean 的 Supplier 对象
+	 */
 	@Nullable
 	private Supplier<?> instanceSupplier;
 
@@ -1079,6 +1082,9 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * @throws BeanDefinitionValidationException in case of validation failure
 	 */
 	public void prepareMethodOverrides() throws BeanDefinitionValidationException {
+
+		// 如果存在 methodOverrides ，则获取所有的 override method ，
+		// 然后通过迭代的方法一次调用 #prepareMethodOverride(MethodOverride mo) 方法
 		// Check that lookup methods exists.
 		if (hasMethodOverrides()) {
 			Set<MethodOverride> overrides = getMethodOverrides().getOverrides();
@@ -1098,16 +1104,25 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * @throws BeanDefinitionValidationException in case of validation failure
 	 */
 	protected void prepareMethodOverride(MethodOverride mo) throws BeanDefinitionValidationException {
+		// 从 class 中获取该方法名的个数
 		int count = ClassUtils.getMethodCountForName(getBeanClass(), mo.getMethodName());
+		// 如果个数为 0 ，则抛出 BeanDefinitionValidationException 异常。
 		if (count == 0) {
 			throw new BeanDefinitionValidationException(
 					"Invalid method override: no method with name '" + mo.getMethodName() +
 					"' on class [" + getBeanClassName() + "]");
 		}
+		// 如果个数为 1 ，则设置该重载方法没有被重载。
 		else if (count == 1) {
 			// Mark override as not overloaded, to avoid the overhead of arg type checking.
 			mo.setOverloaded(false);
 		}
+
+		// 若一个类中存在多个重载方法，则在方法调用的时候还需要根据参数类型来判断到底重载的是哪个方法。
+		// 在设置重载的时候其实这里做了一个小小优化，那就是当 count == 1 时，设置 overloaded = false ，这样表示该方法没有重载。
+		// 这样，在后续调用的时候，便可以直接找到方法而不需要进行方法参数的校验。
+
+		// 该方法并没有做什么实质性的工作，只是对 methodOverrides 属性做了一些简单的校验而已
 	}
 
 
