@@ -43,6 +43,42 @@ import org.springframework.lang.Nullable;
 public interface BeanPostProcessor {
 
 	/**
+	 * BeanPostProcessor 的作用：
+	 * 在 Bean 完成实例化后，如果我们需要对其进行一些配置、增加一些自己的处理逻辑，那么请使用 BeanPostProcessor。
+	 *
+	 * BeanPostProcessor 可以理解为是 Spring 的一个工厂钩子（其实 Spring 提供一系列的钩子，如 Aware 、InitializingBean、DisposableBean），
+	 * 它是 Spring 提供的对象实例化阶段强有力的扩展点，允许 Spring 在实例化 bean 阶段对其进行定制化修改，
+	 * 比较常见的使用场景是处理标记接口实现类或者为当前对象提供代理实现（例如 AOP）。
+	 *
+	 * 一般普通的 BeanFactory 是不支持自动注册 BeanPostProcessor 的，
+	 * 因为在 BeanFactory#getBean(...) 方法的过程中根本就没有将我们自定义的 BeanPostProcessor 注入进来，
+	 * 所以要想 BeanFactory 容器 的 BeanPostProcessor 生效我们必须手动调用 #addBeanPostProcessor(BeanPostProcessor beanPostProcessor) 方法，
+	 * 将定义的 BeanPostProcessor 注册到相应的 BeanFactory 中，
+	 * 注册后的 BeanPostProcessor 适用于所有该 BeanFactory 创建的 bean，
+	 * 如：factory.addBeanPostProcessor(beanPostProcessorTest);
+	 *
+	 * 但是 ApplicationContext 可以在其 bean 定义中自动检测所有的 BeanPostProcessor 并自动完成注册，
+	 * 同时将他们应用到随后创建的任何 Bean 中。
+	 *
+	 * ApplicationContext 实现自动注册的原因，在于我们构造一个 ApplicationContext 实例对象的时候会调用
+	 * #registerBeanPostProcessors(ConfigurableListableBeanFactory beanFactory) 方法，
+	 * 将检测到的 BeanPostProcessor 注入到 ApplicationContext 容器中，同时应用到该容器创建的 bean 中
+	 *
+	 *
+	 * 总结：
+	 * 1.BeanPostProcessor 的作用域是容器级别的，它只和所在的容器相关 ，
+	 * 	当 BeanPostProcessor 完成注册后，它会应用于所有跟它在同一个容器内的 bean 。
+	 * 2.BeanFactory 和 ApplicationContext 对 BeanPostProcessor 的处理不同，
+	 * 	ApplicationContext 会自动检测所有实现了 BeanPostProcessor 接口的 bean，并完成注册，
+	 * 	但是使用 BeanFactory 容器时则需要手动调用 AbstractBeanFactory#addBeanPostProcessor(BeanPostProcessor beanPostProcessor) 方法来完成注册
+	 * 3.ApplicationContext 的 BeanPostProcessor 支持 Ordered，
+	 * 	而 BeanFactory 的 BeanPostProcessor 是不支持的，
+	 * 	原因在于ApplicationContext 会对 BeanPostProcessor 进行 Ordered 检测并完成排序，
+	 * 	而 BeanFactory 中的 BeanPostProcessor 只跟注册的顺序有关。
+	 *
+	 */
+
+	/**
 	 * Apply this BeanPostProcessor to the given new bean instance <i>before</i> any bean
 	 * initialization callbacks (like InitializingBean's {@code afterPropertiesSet}
 	 * or a custom init-method). The bean will already be populated with property values.

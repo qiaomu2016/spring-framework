@@ -37,6 +37,8 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
+import javax.swing.*;
+
 /**
  * Generic registry for shared bean instances, implementing the
  * {@link org.springframework.beans.factory.config.SingletonBeanRegistry}.
@@ -177,6 +179,11 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	protected void addSingletonFactory(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(singletonFactory, "Singleton factory must not be null");
+
+		// 一级缓存 singletonObjects 参考：在类 DefaultSingletonBeanRegistry 中，可以发现这个 #addSingleton(String beanName, Object singletonObject) 方法
+		// 二级缓存 earlySingletonObjects
+		// 三级缓存 singletonFactories
+
 		synchronized (this.singletonObjects) {
 			if (!this.singletonObjects.containsKey(beanName)) {
 				this.singletonFactories.put(beanName, singletonFactory);
@@ -184,6 +191,66 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				this.registeredSingletons.add(beanName);
 			}
 		}
+
+		// http://svip.iocoder.cn/Spring/IoC-get-Bean-createBean-5/#
+		// 循环依赖，其实就是循环引用，就是两个或者两个以上的 bean 互相引用对方，最终形成一个闭环，如 A 依赖 B，B 依赖 C，C 依赖 A
+		// Spring 循环依赖的场景有两种：
+		// ①：构造器的循环依赖。
+		// ②：field 属性的循环依赖。
+		// 对于构造器的循环依赖，Spring 是无法解决的，只能抛出 BeanCurrentlyInCreationException 异常表示循环依赖，所以下面我们分析的都是基于 field 属性的循环依赖。
+		// Spring 只解决 scope 为 singleton 的循环依赖。对于scope 为 prototype 的 bean ，Spring 无法解决，直接抛出 BeanCurrentlyInCreationException 异常。
+
+
+		// 我们先从加载 bean 最初始的方法 AbstractBeanFactory 的 #doGetBean(final String name, final Class<T> requiredType, final Object[] args, boolean typeCheckOnly) 方法开始。
+		// 在 #doGetBean(...) 方法中，首先会根据 beanName 从单例 bean 缓存中获取，如果不为空则直接返回。
+		// 调用 #getSingleton(String beanName, boolean allowEarlyReference) 方法，从单例缓存中获取。
+		// 这个方法主要是从三个缓存中获取，分别是：singletonObjects、earlySingletonObjects、singletonFactories
+		// 	singletonObjects ：单例对象的 Cache 。
+		// 	singletonFactories ： 单例对象工厂的 Cache 。
+		// 	earlySingletonObjects ：提前曝光的单例对象的 Cache 。
+		// 它们三，就是 Spring 解决 singleton bean 的关键因素所在，我称他们为三级缓存：
+		//	第一级为 singletonObjects
+		//	第二级为 earlySingletonObjects
+		//	第三级为 singletonFactories
+
+		// 这里，我们已经通过 #getSingleton(String beanName, boolean allowEarlyReference) 方法，看到他们是如何配合的。详细分析该方法之前，提下其中的 提下其中的
+		// #isSingletonCurrentlyInCreation(String beanName) 方法和 allowEarlyReference 变量：
+		//	#isSingletonCurrentlyInCreation(String beanName) 方法：判断当前 singleton bean 是否处于创建中。
+		// 		bean 处于创建中，也就是说 bean 在初始化但是没有完成初始化，有一个这样的过程其实和 Spring 解决 bean 循环依赖的理念相辅相成。
+		// 		因为 Spring 解决 singleton bean 的核心就在于提前曝光 bean 。
+		//	allowEarlyReference 变量：从字面意思上面理解就是允许提前拿到引用。其实真正的意思是，是否允许从 singletonFactories 缓存中通过 #getObject() 方法，
+		// 		拿到对象。为什么会有这样一个字段呢？原因就在于 singletonFactories 才是 Spring 解决 singleton bean 的诀窍所在，
+
+
+		// #getSingleton(String beanName, boolean allowEarlyReference) 方法，整个过程如下：
+		//
+		// 首先，从一级缓存 singletonObjects 获取。
+		// 如果，没有且当前指定的 beanName 正在创建，就再从二级缓存 earlySingletonObjects 中获取。
+		// 如果，还是没有获取到且允许 singletonFactories 通过 #getObject() 获取，则从三级缓存 singletonFactories 获取。
+		// 	如果获取到，则通过其 #getObject() 方法，获取对象，并将其加入到二级缓存 earlySingletonObjects 中，并从三级缓存 singletonFactories 删除。
+		// 	这样，就从三级缓存升级到二级缓存了。
+		//	所以，二级缓存存在的意义，就是缓存三级缓存中的 ObjectFactory 的 #getObject() 方法的执行结果，提早曝光的单例 Bean 对象。
+
+
+		// 上面是从缓存中获取，但是缓存中的数据从哪里添加进来的呢？一直往下跟会发现在 AbstractAutowireCapableBeanFactory 的
+		// #doCreateBean(final String beanName, final RootBeanDefinition mbd, final Object[] args) 方法中，有这么一段代码：
+		// 当一个 Bean 满足三个条件时，则调用 #addSingletonFactory(...) 方法，将它添加到缓存中。三个条件如下：
+		// ①：单例
+		// ②：运行提前暴露 bean
+		// ③：当前 bean 正在创建中
+
+		// 看下DefaultSingletonBeanRegistry#addSingletonFactory(String beanName, ObjectFactory<?> singletonFactory) 方法
+		// 从这段代码我们可以看出，singletonFactories 这个三级缓存才是解决 Spring Bean 循环依赖的诀窍所在。
+		// 同时这段代码发生在 #createBeanInstance(...) 方法之后，也就是说这个 bean 其实已经被创建出来了，但是它还不是很完美（没有进行属性填充和初始化），
+		// 但是对于其他依赖它的对象而言已经足够了（可以根据对象引用定位到堆中对象），能够被认出来了。
+		// 所以 Spring 在这个时候，选择将该对象提前曝光出来让大家认识认识。
+
+		// Spring 解决 bean 循环依赖方案：
+		// ①：首先 A 完成初始化第一步并将自己提前曝光出来（通过 ObjectFactory 将自己提前曝光），在初始化的时候，发现自己依赖对象 B，此时就会去尝试 get(B)，这个时候发现 B 还没有被创建出来
+		// ②：然后 B 就走创建流程，在 B 初始化的时候，同样发现自己依赖 C，C 也没有被创建出来
+		// ③：这个时候 C 又开始初始化进程，但是在初始化的过程中发现自己依赖 A，于是尝试 get(A)，这个时候由于 A 已经添加至缓存中（一般都是添加至三级缓存 singletonFactories ），通过 ObjectFactory 提前曝光，所以可以通过 ObjectFactory#getObject() 方法来拿到 A 对象，C 拿到 A 对象后顺利完成初始化，然后将自己添加到一级缓存中
+		// ④：回到 B ，B 也可以拿到 C 对象，完成初始化，A 可以顺利拿到 B 完成初始化。到这里整个链路就已经完成了初始化过程了
+
 	}
 
 	@Override

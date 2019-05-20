@@ -59,6 +59,15 @@ import org.springframework.util.ObjectUtils;
  */
 public abstract class PropertySource<T> {
 
+	/**
+	 * Spring 环境 & 属性由四个部分组成：PropertySource、PropertyResolver、Profile 和 Environment。
+	 *
+	 * PropertySource：属性源，key-value 属性对抽象，用于配置数据。
+	 * PropertyResolver：属性解析器，用于解析属性配置
+	 * Profile：剖面，只有激活的剖面的组件/配置才会注册到 Spring 容器，类似于 Spring Boot 中的 profile 。
+	 * Environment：环境，Profile 和 PropertyResolver 的组合。
+	 */
+
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	protected final String name;

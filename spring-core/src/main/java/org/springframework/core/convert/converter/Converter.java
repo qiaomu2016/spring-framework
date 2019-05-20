@@ -34,6 +34,16 @@ import org.springframework.lang.Nullable;
 public interface Converter<S, T> {
 
 	/**
+	 * Converter 是一个将 <S> 类型的源对象转换为 <T> 类型的目标对象的转换器。该接口是线程安全的，所以可以共享
+	 *
+	 * 总结:四种不同的转换器承载着不同的转换过程：
+	 * Converter：用于 1:1 的 source -> target 类型转换。
+	 * ConverterFactory：用于 1:N 的 source -> target 类型转换。
+	 * GenericConverter用于 N:N 的 source -> target 类型转换。
+	 * ConditionalConverter：有条件的 source -> target 类型转换。
+	 */
+
+	/**
 	 * Convert the source object of type {@code S} to target type {@code T}.
 	 * @param source the source object to convert, which must be an instance of {@code S} (never {@code null})
 	 * @return the converted object, which must be an instance of {@code T} (potentially {@code null})

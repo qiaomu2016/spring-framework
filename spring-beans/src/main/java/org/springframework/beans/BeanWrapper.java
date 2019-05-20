@@ -49,6 +49,40 @@ import java.beans.PropertyDescriptor;
 public interface BeanWrapper extends ConfigurablePropertyAccessor {
 
 	/**
+	 * BeanWrapper 是一个从 BeanDefinition 到 Bean 直接的中间产物，我们可以称它为”低级 bean“。
+	 * 在一般情况下，我们不会在实际项目中用到它。
+	 * BeanWrapper 是 Spring 框架中重要的组件类，它就相当于一个代理类，Spring 委托 BeanWrapper 完成 Bean 属性的填充工作。
+	 * 在 Bean 实例被 InstantiationStrategy 创建出来后，Spring 容器会将 Bean 实例通过 BeanWrapper 包裹起来
+	 * eg:
+	 * BeanWrapper bw = new BeanWrapperImpl(beanInstance);
+	 * initBeanWrapper(bw);
+	 *
+	 * BeanWrapper 主要继承三个核心接口：PropertyAccessor、PropertyEditorRegistry、TypeConverter
+	 * PropertyAccessor:可以访问属性的通用型接口（例如对象的 bean 属性或者对象中的字段），作为 BeanWrapper 的基础接口
+	 * PropertyEditorRegistry:用于注册 JavaBean 的 PropertyEditors，对 PropertyEditorRegistrar 起核心作用的中心接口。
+	 * 	由 BeanWrapper 扩展，BeanWrapperImpl 和 DataBinder 实现。
+	 * 	根据接口提供的方法，PropertyEditorRegistry 就是用于 PropertyEditor 的注册和发现，而 PropertyEditor 是 Java 内省里面的接口，用于改变指定 property 属性的类型。
+	 * TypeConverter:定义类型转换的接口，通常与 PropertyEditorRegistry 接口一起实现（但不是必须），
+	 * 	但由于 TypeConverter 是基于线程不安全的 PropertyEditors ，因此 TypeConverters 本身也不被视为线程安全。
+	 *
+	 * 注:在 Spring 3 后，不在采用 PropertyEditors 类作为 Spring 默认的类型转换接口，而是采用 ConversionService 体系，但 ConversionService 是线程安全的，所以在 Spring 3 后，
+	 * 如果你所选择的类型转换器是 ConversionService 而不是 PropertyEditors 那么 TypeConverters 则是线程安全的。
+	 *
+	 * BeanWrapper 继承上述三个接口，那么它就具有三重身份：
+	 * 属性编辑器
+	 * 属性编辑器注册表
+	 * 类型转换器
+	 *
+	 * BeanWrapper:
+	 * Spring 的 低级 JavaBean 基础结构的接口，一般不会直接使用，而是通过 BeanFactory 或者 DataBinder 隐式使用。
+	 * 它提供分析和操作标准 JavaBeans 的操作：获取和设置属性值、获取属性描述符以及查询属性的可读性/可写性的能力。
+	 *
+	 * BeanWrapperImpl:
+	 * BeanWrapper 接口的默认实现，用于对Bean的包装，实现上面接口所定义的功能很简单包括设置获取被包装的对象，
+	 * 获取被包装bean的属性描述器
+	 */
+
+	/**
 	 * Specify a limit for array and collection auto-growing.
 	 * <p>Default is unlimited on a plain BeanWrapper.
 	 * @since 4.1
@@ -63,15 +97,18 @@ public interface BeanWrapper extends ConfigurablePropertyAccessor {
 
 	/**
 	 * Return the bean instance wrapped by this object.
+	 * 获取包装对象的实例。
 	 */
 	Object getWrappedInstance();
 
 	/**
 	 * Return the type of the wrapped bean instance.
+	 * 获取包装对象的类型。
 	 */
 	Class<?> getWrappedClass();
 
 	/**
+	 * 获取包装对象所有属性的 PropertyDescriptor 就是这个属性的上下文。
 	 * Obtain the PropertyDescriptors for the wrapped object
 	 * (as determined by standard JavaBeans introspection).
 	 * @return the PropertyDescriptors for the wrapped object
@@ -79,6 +116,7 @@ public interface BeanWrapper extends ConfigurablePropertyAccessor {
 	PropertyDescriptor[] getPropertyDescriptors();
 
 	/**
+	 * 获取包装对象指定属性的上下文。
 	 * Obtain the property descriptor for a specific property
 	 * of the wrapped object.
 	 * @param propertyName the property to obtain the descriptor for

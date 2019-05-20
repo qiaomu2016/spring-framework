@@ -41,6 +41,13 @@ import org.springframework.lang.Nullable;
 public interface ConfigurableWebApplicationContext extends WebApplicationContext, ConfigurableApplicationContext {
 
 	/**
+	 * WebApplicationContext 接口和 ConfigurableApplicationContext 接口有一个共同的子类接口 ConfigurableWebApplicationContext，
+	 * 该接口将这两个接口进行合并，提供了一个可配置、可管理、可关闭的 WebApplicationContext ，
+	 * 同时该接口还增加了 #setServletContext(ServletContext servletContext)，setServletConfig(ServletConfig servletConfig) 等方法，
+	 * 用于装配 WebApplicationContext
+	 */
+
+	/**
 	 * Prefix for ApplicationContext ids that refer to context path and/or servlet name.
 	 */
 	String APPLICATION_CONTEXT_ID_PREFIX = WebApplicationContext.class.getName() + ":";

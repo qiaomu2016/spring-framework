@@ -55,6 +55,13 @@ import org.springframework.util.StringUtils;
 public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 
 	/**
+	 * Environment 的基础实现
+	 *
+	 * 允许通过设置 ACTIVE_PROFILES_PROPERTY_NAME 和DEFAULT_PROFILES_PROPERTY_NAME 属性指定活动和默认配置文件。
+	 * 子类的主要区别在于它们默认添加的 PropertySource 对象。而 AbstractEnvironment 则没有添加任何内容。
+	 */
+
+	/**
 	 * System property that instructs Spring to ignore system environment variables,
 	 * i.e. to never attempt to retrieve such a variable via {@link System#getenv()}.
 	 * <p>The default is "false", falling back to system environment variable checks if a
@@ -114,6 +121,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 
 
 	/**
+	 * 子类应该通过受保护的 #customizePropertySources(MutablePropertySources) 钩子提供属性源
 	 * Create a new {@code Environment} instance, calling back to
 	 * {@link #customizePropertySources(MutablePropertySources)} during construction to
 	 * allow subclasses to contribute or manipulate {@link PropertySource} instances as
@@ -254,8 +262,11 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 			logger.debug("Activating profiles " + Arrays.asList(profiles));
 		}
 		synchronized (this.activeProfiles) {
+			// 清空 activeProfiles
 			this.activeProfiles.clear();
+			// 遍历 profiles 数组，添加到 activeProfiles 中
 			for (String profile : profiles) {
+				// 校验
 				validateProfile(profile);
 				this.activeProfiles.add(profile);
 			}
@@ -389,6 +400,10 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 		}
 	}
 
+	/**
+	 * 而客户端应该使用AbstractEnvironment#getPropertySources() 方法，进行自定义并对 MutablePropertySources API 进行操作
+	 * @return
+	 */
 	@Override
 	public MutablePropertySources getPropertySources() {
 		return this.propertySources;

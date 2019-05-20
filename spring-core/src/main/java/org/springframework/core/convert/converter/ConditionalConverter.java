@@ -43,6 +43,11 @@ import org.springframework.core.convert.TypeDescriptor;
 public interface ConditionalConverter {
 
 	/**
+	 * ConditionalConverter 接口用于表示有条件的类型转换，通过转入的sourceType 与 targetType 判断转换能否匹配，
+	 * 只有可匹配的转换才会调用convert 方法进行转换
+	 */
+
+	/**
 	 * Should the conversion from {@code sourceType} to {@code targetType} currently under
 	 * consideration be selected?
 	 * @param sourceType the type descriptor of the field we are converting from

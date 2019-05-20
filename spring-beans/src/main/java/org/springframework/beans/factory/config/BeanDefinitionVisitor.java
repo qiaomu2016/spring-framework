@@ -76,6 +76,10 @@ public class BeanDefinitionVisitor {
 	 * @see #resolveStringValue(String)
 	 */
 	public void visitBeanDefinition(BeanDefinition beanDefinition) {
+
+		// 可以看到该方法基本访问了 BeanDefinition 中所有值得访问的东西了，
+		// 包括 parent 、class 、factory-bean 、factory-method 、scope 、property 、constructor-arg
+
 		visitParentName(beanDefinition);
 		visitBeanClassName(beanDefinition);
 		visitFactoryBeanName(beanDefinition);
@@ -142,10 +146,16 @@ public class BeanDefinitionVisitor {
 	}
 
 	protected void visitPropertyValues(MutablePropertyValues pvs) {
+
+		// 过程就是对属性数组进行遍历，调用 #resolveValue(Object value)方法，对属性进行解析获取最新值，如果新值和旧值不等，则用新值替换旧值。
+
 		PropertyValue[] pvArray = pvs.getPropertyValues();
+		// 遍历 PropertyValue 数组
 		for (PropertyValue pv : pvArray) {
+			// 解析真值
 			Object newVal = resolveValue(pv.getValue());
 			if (!ObjectUtils.nullSafeEquals(newVal, pv.getValue())) {
+				// 设置到 PropertyValue 中
 				pvs.add(pv.getName(), newVal);
 			}
 		}

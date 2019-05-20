@@ -51,6 +51,30 @@ import org.springframework.util.Assert;
  */
 public class ClassPathXmlApplicationContext extends AbstractXmlApplicationContext {
 
+	/**
+	 * 主要的的类层级关系如下：
+	 *
+	 * org.springframework.context.support.AbstractApplicationContext
+	 *       org.springframework.context.support.AbstractRefreshableApplicationContext
+	 *             org.springframework.context.support.AbstractRefreshableConfigApplicationContext
+	 *                   org.springframework.context.support.AbstractXmlApplicationContext
+	 *                         org.springframework.context.support.ClassPathXmlApplicationContext
+	 *
+	 * 这种设计是模板方法模式典型的应用，AbstractApplicationContext 实现了 ConfigurableApplicationContext 这个全家桶接口，
+	 * 其子类 AbstractRefreshableConfigApplicationContext 又实现了 BeanNameAware 和 InitializingBean 接口。
+	 * 所以 ClassPathXmlApplicationContext 设计的顶级接口有：
+	 * BeanFactory：Spring 容器 Bean 的管理
+	 * MessageSource：管理 message ，实现国际化等功能
+	 * ApplicationEventPublisher：事件发布
+	 * ResourcePatternResolver：资源加载
+	 * EnvironmentCapable：系统 Environment（profile + Properties） 相关
+	 * Lifecycle：管理生命周期
+	 * Closable：关闭，释放资源
+	 * InitializingBean：自定义初始化
+	 * BeanNameAware：设置 beanName 的 Aware 接口
+	 *
+	 */
+
 	@Nullable
 	private Resource[] configResources;
 

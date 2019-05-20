@@ -58,6 +58,13 @@ import org.springframework.util.StringValueResolver;
  */
 public class PropertyPlaceholderConfigurer extends PlaceholderConfigurerSupport {
 
+	/**
+	 * PropertyPlaceholderConfigurer 允许我们用 Properties 文件中的属性，来定义应用上下文（配置文件或者注解）。
+	 * 什么意思，就是说我们在 XML 配置文件（或者其他方式，如注解方式）中使用占位符的方式来定义一些资源，
+	 * 并将这些占位符所代表的资源配置到 Properties 中，这样只需要对 Properties 文件进行修改即可
+	 */
+
+
 	/** Never check system properties. */
 	public static final int SYSTEM_PROPERTIES_MODE_NEVER = 0;
 
@@ -209,7 +216,9 @@ public class PropertyPlaceholderConfigurer extends PlaceholderConfigurerSupport 
 	protected void processProperties(ConfigurableListableBeanFactory beanFactoryToProcess, Properties props)
 			throws BeansException {
 
+		// 创建 StringValueResolver 对象
 		StringValueResolver valueResolver = new PlaceholderResolvingStringValueResolver(props);
+		// 处理
 		doProcessProperties(beanFactoryToProcess, valueResolver);
 	}
 

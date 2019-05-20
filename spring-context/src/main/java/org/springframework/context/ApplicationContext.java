@@ -59,6 +59,31 @@ public interface ApplicationContext extends EnvironmentCapable, ListableBeanFact
 		MessageSource, ApplicationEventPublisher, ResourcePatternResolver {
 
 	/**
+	 * BeanFactory 容器有点儿简单，它并不适用于我们生产环境，在生产环境我们通常会选择 ApplicationContext ，
+	 * 相对于大多数人而言，它才是正规军，相比于 BeanFactory 这个杂牌军而言，它由如下几个区别：
+	 *
+	 * 继承 MessageSource，提供国际化的标准访问策略。
+	 * 继承 ApplicationEventPublisher ，提供强大的事件机制。
+	 * 扩展 ResourceLoader，可以用来加载多个 Resource，可以灵活访问不同的资源。
+	 * 对 Web 应用的支持。
+	 *
+	 *
+	 * 看下ApplicationContext 结构类图
+	 * ①：BeanFactory：Spring 管理 Bean 的顶层接口，我们可以认为他是一个简易版的 Spring 容器。
+	 * 	ApplicationContext 继承 BeanFactory 的两个子类：HierarchicalBeanFactory 和 ListableBeanFactory。
+	 * 	HierarchicalBeanFactory 是一个具有层级关系的 BeanFactory，拥有属性 parentBeanFactory 。
+	 * 	ListableBeanFactory 实现了枚举方法可以列举出当前 BeanFactory 中所有的 bean 对象而不必根据 name 一个一个的获取。
+	 * ②：ApplicationEventPublisher：用于封装事件发布功能的接口，向事件监听器（Listener）发送事件消息。
+	 * ③：ResourceLoader：Spring 加载资源的顶层接口，用于从一个源加载资源文件。
+	 * 	ApplicationContext 继承 ResourceLoader 的子类 ResourcePatternResolver，该接口是将 location 解析为 Resource 对象的策略接口。
+	 * ④：MessageSource：解析 message 的策略接口，用不支撑国际化等功能。
+	 * ⑤：EnvironmentCapable：用于获取 Environment 的接口。
+	 *
+	 *
+	 * ApplicationContext 有两个直接子类：WebApplicationContext 和 ConfigurableApplicationContext
+	 */
+
+	/**
 	 * Return the unique id of this application context.
 	 * @return the unique id of the context, or {@code null} if none
 	 */

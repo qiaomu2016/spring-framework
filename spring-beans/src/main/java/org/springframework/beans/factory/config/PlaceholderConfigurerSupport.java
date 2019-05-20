@@ -212,13 +212,18 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 
 	protected void doProcessProperties(ConfigurableListableBeanFactory beanFactoryToProcess,
 			StringValueResolver valueResolver) {
-
+		// 创建 BeanDefinitionVisitor 对象
+		// 根据 String 值解析策略 valueResolver 得到 BeanDefinitionVisitor 实例。
+		// BeanDefinitionVisitor 是 BeanDefinition 的访问者，我们通过它可以实现对 BeanDefinition 内容的进行访问，内容很多，
+		// 例如 Scope、PropertyValues、FactoryMethodName 等等。
 		BeanDefinitionVisitor visitor = new BeanDefinitionVisitor(valueResolver);
 
+		// 得到该容器的所有 BeanName，然后对其进行访问
 		String[] beanNames = beanFactoryToProcess.getBeanDefinitionNames();
 		for (String curName : beanNames) {
 			// Check that we're not parsing our own bean definition,
 			// to avoid failing on unresolvable placeholders in properties file locations.
+			// 校验:  当前实例 PlaceholderConfigurerSupport 不在解析范围内 &&  同一个 Spring 容器
 			if (!(curName.equals(this.beanName) && beanFactoryToProcess.equals(this.beanFactory))) {
 				BeanDefinition bd = beanFactoryToProcess.getBeanDefinition(curName);
 				try {
@@ -231,9 +236,11 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 		}
 
 		// New in Spring 2.5: resolve placeholders in alias target names and aliases as well.
+		// 解析别名的占位符
 		beanFactoryToProcess.resolveAliases(valueResolver);
 
 		// New in Spring 3.0: resolve placeholders in embedded values such as annotation attributes.
+		// 解析嵌入值的占位符，例如注释属性
 		beanFactoryToProcess.addEmbeddedValueResolver(valueResolver);
 	}
 

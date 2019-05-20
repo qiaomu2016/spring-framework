@@ -40,6 +40,13 @@ import org.springframework.util.SystemPropertyUtils;
  */
 public abstract class AbstractPropertyResolver implements ConfigurablePropertyResolver {
 
+	/**
+	 * 解析属性文件的抽象基类
+	 *
+	 * AbstractPropertyResolver 作为基类它仅仅只是设置了一些解析属性文件所需要配置或者转换器
+	 * 而对属性的访问，则委托给子类 PropertySourcesPropertyResolver 实现。
+	 */
+
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	@Nullable
@@ -67,6 +74,8 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	public ConfigurableConversionService getConversionService() {
 		// Need to provide an independent DefaultConversionService, not the
 		// shared DefaultConversionService used by PropertySourcesPropertyResolver.
+		// 需要提供独立的DefaultConversionService，而不是PropertySourcesPropertyResolver
+		// 使用的共享DefaultConversionService。
 		ConfigurableConversionService cs = this.conversionService;
 		if (cs == null) {
 			synchronized (this) {
@@ -234,6 +243,8 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	}
 
 	private String doResolvePlaceholders(String text, PropertyPlaceholderHelper helper) {
+		// String 类型的 text：待解析的字符串
+		// PropertyPlaceholderHelper 类型的 helper：用于解析占位符的工具类。
 		return helper.replacePlaceholders(text, this::getPropertyAsRawString);
 	}
 
@@ -251,6 +262,8 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 		if (targetType == null) {
 			return (T) value;
 		}
+		// 首先，获取类型转换服务 conversionService 。若为空，则判断是否可以通过反射来设置，
+		// 如果可以则直接强转返回，否则构造一个 DefaultConversionService 实例。
 		ConversionService conversionServiceToUse = this.conversionService;
 		if (conversionServiceToUse == null) {
 			// Avoid initialization of shared DefaultConversionService if
@@ -260,6 +273,7 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 			}
 			conversionServiceToUse = DefaultConversionService.getSharedInstance();
 		}
+		// 调用convert方法，完成类型转换
 		return conversionServiceToUse.convert(value, targetType);
 	}
 
