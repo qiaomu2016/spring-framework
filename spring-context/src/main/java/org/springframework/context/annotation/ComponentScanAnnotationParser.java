@@ -74,6 +74,18 @@ class ComponentScanAnnotationParser {
 
 
 	public Set<BeanDefinitionHolder> parse(AnnotationAttributes componentScan, final String declaringClass) {
+
+		// 解析方法过程:
+		// 1)、实例化元数据（注解）扫描器ClassPathBeanDefinitionScanner
+		// 2)、分析出Bean名称生成器BeanNameGenerator
+		// 3)、分析出代理模型ScopedProxyMode
+		// 4)、分析出resourcePattern，默认值"*/.class"
+		// 5)、分析出扫描包含的目录includeFilters、排除的目录excludeFilters，生成过滤规则
+		// 6)、分析出加载类型，延迟或非延迟
+		// 7)、将上述属性设置到ClassPathBeanDefinitionScanner
+		// 8)、分析出扫描的包路径数组basePackages，
+		// 9)、使用ClassPathBeanDefinitionScanner扫描basePackages包中符合条件的Bean注册到容器，然后检查Bean是否为ConfigurationClass，如果是则递归解析
+
 		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(this.registry,
 				componentScan.getBoolean("useDefaultFilters"), this.environment, this.resourceLoader);
 

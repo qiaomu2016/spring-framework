@@ -204,9 +204,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	@SuppressWarnings("unchecked")
 	protected void registerDefaultFilters() {
+		//  向include过滤规则中添加@Component注解
 		this.includeFilters.add(new AnnotationTypeFilter(Component.class));
 		ClassLoader cl = ClassPathScanningCandidateComponentProvider.class.getClassLoader();
 		try {
+			// 向include过滤规则添加JSR-250:@ManagedBean注解
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.annotation.ManagedBean", cl)), false));
 			logger.trace("JSR-250 'javax.annotation.ManagedBean' found and supported for component scanning");
@@ -215,6 +217,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			// JSR-250 1.1 API (as included in Java EE 6) not available - simply skip.
 		}
 		try {
+			// 向include过滤规则添加JSR-330:@Named注解
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.inject.Named", cl)), false));
 			logger.trace("JSR-330 'javax.inject.Named' annotation found and supported for component scanning");
@@ -222,6 +225,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		catch (ClassNotFoundException ex) {
 			// JSR-330 API not available - simply skip.
 		}
+
+		// 可以看到使用使用Spring @Component注解类、使用JSR-250:@ManagedBean、JSR-330:@Named注解的类都在include规则中，
+		// 另外Spring中@Repository 、@Service、@Controller、@Configuration都是被@Component注解过的组合注解，
+		// 所以添加了这些注解的类都会作为候选的Bean
+
 	}
 
 	/**
@@ -414,24 +422,34 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	}
 
 	private Set<BeanDefinition> scanCandidateComponents(String basePackage) {
+		// 创建存储扫描到的类的集合
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {
+			// 默认的包路径：this.resourcePattern=” **/*.class”，
+			// resolveBasePackage方法将包名中的”.”转换为文件系统的”/”
 			String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
 					resolveBasePackage(basePackage) + '/' + this.resourcePattern;
 			Resource[] resources = getResourcePatternResolver().getResources(packageSearchPath);
 			boolean traceEnabled = logger.isTraceEnabled();
 			boolean debugEnabled = logger.isDebugEnabled();
+			// 循环获取到的资源文件
 			for (Resource resource : resources) {
 				if (traceEnabled) {
 					logger.trace("Scanning " + resource);
 				}
 				if (resource.isReadable()) {
 					try {
+						// 为指定资源获取元数据读取器，元信息读取器通过汇编(ASM)读//取资源元信息
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
+						// 如果扫描到的类符合容器配置的过滤规则
 						if (isCandidateComponent(metadataReader)) {
+							// 通过汇编(ASM)读取资源字节码中的Bean定义元信息
 							ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
+							// 设置Bean定义来源于resource
 							sbd.setResource(resource);
+							// 为元数据元素设置配置资源对象
 							sbd.setSource(resource);
+							// 检查Bean是否是一个可实例化的对象
 							if (isCandidateComponent(sbd)) {
 								if (debugEnabled) {
 									logger.debug("Identified candidate component class: " + resource);

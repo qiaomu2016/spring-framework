@@ -64,16 +64,18 @@ public abstract class AopNamespaceUtils {
 
 	public static void registerAspectJAutoProxyCreatorIfNecessary(
 			ParserContext parserContext, Element sourceElement) {
-
+		// 创建或升级（判断优先级）自动代理构建器
 		BeanDefinition beanDefinition = AopConfigUtils.registerAspectJAutoProxyCreatorIfNecessary(
 				parserContext.getRegistry(), parserContext.extractSource(sourceElement));
+		// 解析 <aop:config> 属性 proxyTargetClass 和 exposeProxy
+		// 如果存在并为 true ，则把属性值添加 至 自动代理构建器的属性集合中
 		useClassProxyingIfNecessary(parserContext.getRegistry(), sourceElement);
+		// 如果beanDefinition不为Null（即之前还没有构建），则添加到 containingComponents 双向队列中
 		registerComponentIfNecessary(beanDefinition, parserContext);
 	}
 
 	public static void registerAspectJAnnotationAutoProxyCreatorIfNecessary(
 			ParserContext parserContext, Element sourceElement) {
-
 		BeanDefinition beanDefinition = AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(
 				parserContext.getRegistry(), parserContext.extractSource(sourceElement));
 		useClassProxyingIfNecessary(parserContext.getRegistry(), sourceElement);

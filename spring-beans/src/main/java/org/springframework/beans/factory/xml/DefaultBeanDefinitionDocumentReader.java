@@ -131,12 +131,17 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		// 记录老的 BeanDefinitionParserDelegate 对象
 		BeanDefinitionParserDelegate parent = this.delegate;
 
-		// 创建 BeanDefinitionParserDelegate 对象，并赋值给delegate
+		// 1）创建 BeanDefinitionParserDelegate 对象，赋值给delegate
+		// 内部同时会根据Beans的属性给该对象的DocumentDefaultsDefinition属性进行赋值
 		// BeanDefinitionParserDelegate 是一个重要的类，它负责解析 BeanDefinition
 		this.delegate = createDelegate(getReaderContext(), root, parent);
 
 		// 检查 <beans /> 根标签的命名空间是否为空，或者是 http://www.springframework.org/schema/beans
+		// <beans xmlns="http://www.springframework.org/schema/beans">
+		// <beans>
 		if (this.delegate.isDefaultNamespace(root)) {
+
+			// 2）根据profile判断当前Beans是否需要注册
 			// 处理 profile 属性，如<beans profile="">,参考：https://nassir.iteye.com/blog/1535799
 			String profileSpec = root.getAttribute(PROFILE_ATTRIBUTE);
 			if (StringUtils.hasText(profileSpec)) {
@@ -145,7 +150,8 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 						profileSpec, BeanDefinitionParserDelegate.MULTI_VALUE_ATTRIBUTE_DELIMITERS);
 				// We cannot use Profiles.of(...) since profile expressions are not supported
 				// in XML config. See SPR-12458 for details.
-				// 如果所有 profile 都无效，则不进行注册
+				// 根据环境变量配置的值（如spring.profiles.active配置的值）来验证当前Beans配置profile是否有效。
+				// 如果环境变量配置的值 不存在 Beans的配置范围内，则不进行注册，直接返回;
 				if (!getReaderContext().getEnvironment().acceptsProfiles(specifiedProfiles)) {
 					if (logger.isDebugEnabled()) {
 						logger.debug("Skipped XML bean definition file due to specified profiles [" + profileSpec +
@@ -156,13 +162,13 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 			}
 		}
 
-		// 解析前处理 -> 空实现，交由子类来实现
+		// 3）解析前处理 -> 空实现，交由子类来实现
 		preProcessXml(root);
 
-		// 解析
+		// 4）解析
 		parseBeanDefinitions(root, this.delegate);
 
-		// 解析后处理 -> 空实现，交由子类来实现
+		// 5）解析后处理 -> 空实现，交由子类来实现
 		postProcessXml(root);
 
 		// 重置 delegate为旧的BeanDefinitionParserDelegate对象

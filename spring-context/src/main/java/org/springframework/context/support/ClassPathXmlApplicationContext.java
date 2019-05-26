@@ -162,8 +162,13 @@ public class ClassPathXmlApplicationContext extends AbstractXmlApplicationContex
 			String[] configLocations, boolean refresh, @Nullable ApplicationContext parent)
 			throws BeansException {
 
+		// 构建资源解析器：PathMatchingResourcePatternResolver
 		super(parent);
+
+		// 如果入参configLocations提供的资源文件中存在占位符，则用环境变量进行替换，再放到父类的configLocations数组中
 		setConfigLocations(configLocations);
+
+		// 刷新上下文，加载所有的beanDefinitions并创建所有的单例对象
 		if (refresh) {
 			refresh();
 		}

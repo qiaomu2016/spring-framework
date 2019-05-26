@@ -220,6 +220,10 @@ final class PostProcessorRegistrationDelegate {
 	public static void registerBeanPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
 
+		/**
+		 * 从Spring容器中找出的实现了BeanPostProcessor接口的Bean，并设置到BeanFactory中,之后bean被实例化的时候会调用这些BeanPostProcessor
+		 */
+
 		// 获取所有的 BeanPostProcessor 的 beanName
 		// 这些 beanName 都已经全部加载到容器中去，但是没有实例化
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);

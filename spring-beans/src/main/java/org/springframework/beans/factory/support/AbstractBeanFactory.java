@@ -243,11 +243,17 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		// 这里传递的是 name ，不一定就是 beanName，可能是 aliasName ，也有可能是 FactoryBean ，
 		// 所以这里需要调用 #transformedBeanName(String name) 方法，对 name 进行一番转换
 		// 该方法会剥离工厂引用前缀，返回 bean 名称。如果 name 是 alias ，则获取对应映射的 beanName 。
+		// eg：可能存在传入别名且别名存在多重映射的情况，这里会返回最终的名字，如存在多层别名映射A->B->C->D，传入D,最终会返回A
 		final String beanName = transformedBeanName(name);
 		Object bean;
 
 		// 从缓存中或者实例工厂中获取 Bean 对象
 		// Eagerly check singleton cache for manually registered singletons.
+		// 这里先尝试从缓存中获取，获取不到再走后面创建的流程
+		// 获取到有两种情况，一种是Bean创建完成存储到最终的缓存中。
+		// 另一种是未创建完成，但先预存到一个单独的缓存中，这种是针对可能存在循环引用的情况的处理。
+		// 如A引用B,B又引用了A,因而在初始化A时，A会先调用构造函数创建出一个实例，在依赖注入B之前，现将A实例缓存起来
+		// 然后在初始化A时，依赖注入阶段，会触发初始化B，B创建后需要依赖注入A时，先从缓存中获取A（这个时候的A是不完整的)，避免循环依赖的问题出现。
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
@@ -1740,7 +1746,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		if (mbd == null) {
 			object = getCachedObjectForFactoryBean(beanName);
 		}
-		// 若 object 依然为空，则可以确认，beanInstance 一定是 FactoryBean 。从而，使用 FactoryBean 获得 Bean 对象
+		// 若 object 依然为空，则使用 FactoryBean 获得 Bean 对象
 		if (object == null) {
 			// Return bean instance from factory.
 			FactoryBean<?> factory = (FactoryBean<?>) beanInstance;

@@ -59,6 +59,35 @@ import org.springframework.lang.Nullable;
 public interface FactoryBean<T> {
 
 	/**
+	 * FactoryBean
+	 * 一般情况下，Spring 通过反射机制利用 <bean> 的 class 属性指定实现类实例化 Bean。
+	 * 在某些情况下，实例化Bean 过程比较复杂，如果按照传统的方式，则需要在 <bean> 中提供大量的配置信息。
+	 * 配置方式的灵活性是受限的，这时采用编码的方式可能会得到一个简单的方案。
+	 * Spring 为此提供了一个org.springframework.bean.factory.FactoryBean 的工厂类接口，用户可以通过实现该接口定制实例化 Bean 的逻辑。
+	 *
+	 * FactoryBean接口对于 Spring 框架来说占用重要的地位， Spring 自身就提供了 70 多个 FactoryBean 的实现。
+	 * 它们隐藏了实例化一些复杂 Bean 的细节，给上层应用带来了便利。
+	 * 从 Spring 3.0 开始， FactoryBean 开始支持泛型，即接口声明改为 FactoryBean<T> 的形式
+	 *
+	 *
+	 * 在该接口中还定义了以下3 个方法：
+	 * 1）T getObject()：返回由 FactoryBean 创建的 Bean 实例，如果 isSingleton() 返回 true ，则该实例会放到 Spring容器中单实例缓存池中；
+	 * 2）boolean isSingleton()：返回由 FactoryBean 创建的 Bean 实例的作用域是 singleton 还是 prototype ；
+	 * 3）Class<T> getObjectType()：返回 FactoryBean 创建的 Bean 类型。
+	 *
+	 * 当配置文件中<bean> 的 class 属性配置的实现类是 FactoryBean 时，通过 getBean() 方法返回的不是FactoryBean 本身，
+	 * 而是 FactoryBean#getObject() 方法所返回的对象，相当于 FactoryBean#getObject() 代理了getBean() 方法。
+	 * 如果希望获取 FactoryBean 的实例，则需要在使用getBean(beanName) 方法时在 beanName 前显示的加上 "&" 前缀：如 getBean("&car");
+	 *
+	 *
+	 * BeanFactory与FactoryBean区别：
+	 * BeanFactory是个 Factory ，也就是 IOC 容器或对象工厂， FactoryBean 是个 Bean 。
+	 * 在 Spring 中，所有的Bean 都是由 BeanFactory( 也就是 IOC 容器 ) 来进行管理的。
+	 * 但对 FactoryBean 而言，这个 Bean 不是简单的 Bean，而是一个能生产或者修饰对象生成的工厂 Bean, 它的实现与设计模式中的工厂模式和修饰器模式类似。
+	 *
+	 */
+
+	/**
 	 * Return an instance (possibly shared or independent) of the object
 	 * managed by this factory.
 	 * <p>As with a {@link BeanFactory}, this allows support for both the

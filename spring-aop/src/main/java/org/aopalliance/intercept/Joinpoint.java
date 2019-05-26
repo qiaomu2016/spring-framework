@@ -40,6 +40,10 @@ import java.lang.reflect.AccessibleObject;
 public interface Joinpoint {
 
 	/**
+	 * <p>用于执行拦截器链中的下一个拦截器逻辑</p>
+	 * <p>关于拦截器这里简单说一下吧，以前置通知拦截器为例。
+	 * 在执行目标方法前，该拦截器首先会执行前置通知逻辑，如果拦截器链中还有其他的拦截器，则继续调用下一个拦截器逻辑。
+	 * 直到拦截器链中没有其他的拦截器后，再去调用目标方法。</p>
 	 * Proceed to the next interceptor in the chain.
 	 * <p>The implementation and the semantics of this method depends
 	 * on the actual joinpoint type (see the children interfaces).
