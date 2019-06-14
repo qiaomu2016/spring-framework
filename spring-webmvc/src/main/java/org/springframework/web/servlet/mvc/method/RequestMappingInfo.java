@@ -57,18 +57,46 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	@Nullable
 	private final String name;
 
+	/**
+	 * 下面的各种条件，实际上，和 @RequestMapping 注解是一一对应的
+	 * 参考：https://linesh.gitbooks.io/spring-mvc-documentation-linesh-translation/content/publish/21-3/2-mapping-requests-with-@requestmapping.html
+	 * 实际上，我们日常使用最多的还是 patternsCondition 请求路径条件，和 methodsCondition 请求方法条件。
+	 * eg: @RequestMapping(path = "/{id}", method = RequestMethod.GET)
+	 */
+
+	/**
+	 * 请求路径的条件
+	 */
 	private final PatternsRequestCondition patternsCondition;
 
+	/**
+	 * 请求方法的条件
+	 */
 	private final RequestMethodsRequestCondition methodsCondition;
 
+	/**
+	 * 参数的条件
+	 */
 	private final ParamsRequestCondition paramsCondition;
 
+	/**
+	 * 请求头的条件
+	 */
 	private final HeadersRequestCondition headersCondition;
 
+	/**
+	 * 可消费的 Content-Type 的条件
+	 */
 	private final ConsumesRequestCondition consumesCondition;
 
+	/**
+	 * 可生产的 Content-Type 的条件
+	 */
 	private final ProducesRequestCondition producesCondition;
 
+	/**
+	 * 自定义的条件
+	 */
 	private final RequestConditionHolder customConditionHolder;
 
 
@@ -207,6 +235,8 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	}
 
 	/**
+	 * 从当前 RequestMappingInfo 获得匹配的条件。
+	 * 如果匹配，则基于其匹配的条件，创建新的 RequestMappingInfo 对象。如果不匹配，则返回 null
 	 * Checks if all conditions in this request mapping info match the provided request and returns
 	 * a potentially new request mapping info with conditions tailored to the current request.
 	 * <p>For example the returned instance may contain the subset of URL patterns that match to
@@ -216,6 +246,12 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	@Override
 	@Nullable
 	public RequestMappingInfo getMatchingCondition(HttpServletRequest request) {
+
+		// 匹配 methodsCondition、paramsCondition、headersCondition、consumesCondition、producesCondition、patternsCondition、customConditionHolder
+		// 如果任一为空，则返回 null ，表示匹配失败
+		// 疑惑? 如果一个 @RequestMapping(value = "user/login") 注解，并未写 RequestMethod 的条件，岂不是会报空？
+		// 实际上不会。在这种情况下，会创建一个 RequestMethodsRequestCondition 对象，并且在匹配时，直接返回自身
+
 		RequestMethodsRequestCondition methods = this.methodsCondition.getMatchingCondition(request);
 		if (methods == null) {
 			return null;
@@ -245,6 +281,10 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 			return null;
 		}
 
+		// 创建匹配的 RequestMappingInfo 对象。
+		// 为什么要创建 RequestMappingInfo 对象呢？
+		// 因为当前 RequestMappingInfo 对象，一个 methodsCondition 可以配置 GET、POST、DELETE 等等条件，
+		// 但是实际就匹配一个请求类型，此时 methods 只代表其匹配的那个。
 		return new RequestMappingInfo(this.name, patterns,
 				methods, params, headers, consumes, produces, custom.getCondition());
 	}
@@ -259,12 +299,14 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	public int compareTo(RequestMappingInfo other, HttpServletRequest request) {
 		int result;
 		// Automatic vs explicit HTTP HEAD mapping
+		// 针对 HEAD 请求方法，特殊处理
 		if (HttpMethod.HEAD.matches(request.getMethod())) {
 			result = this.methodsCondition.compareTo(other.getMethodsCondition(), request);
 			if (result != 0) {
 				return result;
 			}
 		}
+		// 根据每个Condition进行比较
 		result = this.patternsCondition.compareTo(other.getPatternsCondition(), request);
 		if (result != 0) {
 			return result;

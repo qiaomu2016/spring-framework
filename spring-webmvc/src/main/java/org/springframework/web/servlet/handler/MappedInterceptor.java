@@ -44,14 +44,42 @@ import org.springframework.web.servlet.ModelAndView;
  */
 public final class MappedInterceptor implements HandlerInterceptor {
 
+	/**
+	 * 支持地址匹配的 HandlerInterceptor 实现类
+	 *
+	 * eg: 每一个 <mvc:interceptor /> 标签，将被解析成一个 MappedInterceptor Bean 对象。
+	 * <mvc:interceptors>
+	 *     <mvc:interceptor>
+	 *         <mvc:mapping path="/interceptor/**" />
+	 *         <mvc:exclude-mapping path="/interceptor/b/*" />
+	 *         <bean class="com.qiaomuer.learn.spring.mvc.interceptor.MyInterceptor" />
+	 *     </mvc:interceptor>
+	 * </mvc:interceptors>
+	 *
+	 * 每一个 <mvc:interceptor /> 标签，会被 org.springframework.web.servlet.config.InterceptorsBeanDefinitionParser 解析成 MappedInterceptor 对象，注册到 Spring IOC 容器中。
+	 * 在 AbstractHandlerMapping 的 #detectMappedInterceptors(List<HandlerInterceptor> mappedInterceptors) 方法中，会扫描 MappedInterceptor Bean
+	 */
+
+	/**
+	 * 匹配的路径
+	 */
 	@Nullable
 	private final String[] includePatterns;
 
+	/**
+	 * 不匹配的路径
+	 */
 	@Nullable
 	private final String[] excludePatterns;
 
+	/**
+	 * HandlerInterceptor 拦截器对象
+	 */
 	private final HandlerInterceptor interceptor;
 
+	/**
+	 * 路径匹配器
+	 */
 	@Nullable
 	private PathMatcher pathMatcher;
 
@@ -145,6 +173,7 @@ public final class MappedInterceptor implements HandlerInterceptor {
 	 */
 	public boolean matches(String lookupPath, PathMatcher pathMatcher) {
 		PathMatcher pathMatcherToUse = (this.pathMatcher != null ? this.pathMatcher : pathMatcher);
+		// 先排重
 		if (!ObjectUtils.isEmpty(this.excludePatterns)) {
 			for (String pattern : this.excludePatterns) {
 				if (pathMatcherToUse.match(pattern, lookupPath)) {
@@ -152,10 +181,13 @@ public final class MappedInterceptor implements HandlerInterceptor {
 				}
 			}
 		}
+		// 特殊，如果包含为空，则默认就是包含
 		if (ObjectUtils.isEmpty(this.includePatterns)) {
 			return true;
 		}
+		// 后包含
 		for (String pattern : this.includePatterns) {
+			// 匹配
 			if (pathMatcherToUse.match(pattern, lookupPath)) {
 				return true;
 			}
