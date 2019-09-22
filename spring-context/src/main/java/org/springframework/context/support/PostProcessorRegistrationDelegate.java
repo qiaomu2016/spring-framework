@@ -67,7 +67,7 @@ final class PostProcessorRegistrationDelegate {
 			// BeanDefinitionRegistryPostProcessor 集合
 			List<BeanDefinitionRegistryPostProcessor> registryProcessors = new ArrayList<>();
 
-			// 迭代注册的 beanFactoryPostProcessors
+			// 迭代注册的 beanFactoryPostProcessors (注：为手动调用applicationContext.addBeanFactoryPostProcessor()添加的)
 			for (BeanFactoryPostProcessor postProcessor : beanFactoryPostProcessors) {
 				// 如果是 BeanDefinitionRegistryPostProcessor，则调用 postProcessBeanDefinitionRegistry 进行注册，
 				// 同时加入到 registryProcessors 集合中
@@ -93,6 +93,8 @@ final class PostProcessorRegistrationDelegate {
 
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
 			// 首先处理实现了 PriorityOrdered (有限排序接口)的 BeanDefinitionRegistryPostProcessor
+			// 获取Spring框架之前注册的BeanDefinition,即:
+			// org.springframework.context.annotation.internalConfigurationAnnotationProcessor ->  ConfigurationClassPostProcessor
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {

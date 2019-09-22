@@ -89,6 +89,11 @@ class ComponentScanAnnotationParser {
 		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(this.registry,
 				componentScan.getBoolean("useDefaultFilters"), this.environment, this.resourceLoader);
 
+		// @org.springframework.context.annotation.ComponentScan
+		// (scopeResolver=org.springframework.context.annotation.AnnotationScopeMetadataResolver,
+		// lazyInit=false,resourcePattern=**/*.class,excludeFilters=[],useDefaultFilters=true,scopedProxy=DEFAULT,basePackageClasses=[],
+		// nameGenerator=org.springframework.beans.factory.support.BeanNameGenerator,
+		// basePackages=[com.qiaomuer.spring],value=[com.qiaomuer.spring],includeFilters=[])
 		Class<? extends BeanNameGenerator> generatorClass = componentScan.getClass("nameGenerator");
 		boolean useInheritedGenerator = (BeanNameGenerator.class == generatorClass);
 		scanner.setBeanNameGenerator(useInheritedGenerator ? this.beanNameGenerator :
