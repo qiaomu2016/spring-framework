@@ -41,31 +41,44 @@ class AspectJAutoProxyBeanDefinitionParser implements BeanDefinitionParser {
 	@Override
 	@Nullable
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
+		// 注册一个类型为AnnotationAwareAspectJAutoProxyCreator的bean到Spring容器中
 		AopNamespaceUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(parserContext, element);
+		// 通过读取配置文件对扩展相关属性
 		extendBeanDefinition(element, parserContext);
 		return null;
 	}
 
 	private void extendBeanDefinition(Element element, ParserContext parserContext) {
+		// 获取前面注册的AnnotationAwareAspectJAutoProxyCreator对应的BeanDefinition
 		BeanDefinition beanDef =
 				parserContext.getRegistry().getBeanDefinition(AopConfigUtils.AUTO_PROXY_CREATOR_BEAN_NAME);
+		// 解析当前标签的子标签
 		if (element.hasChildNodes()) {
 			addIncludePatterns(element, parserContext, beanDef);
 		}
 	}
 
 	private void addIncludePatterns(Element element, ParserContext parserContext, BeanDefinition beanDef) {
+
+		// 解析子标签中的name属性，其可以有多个，这个name属性最终会被添加到
+		// AnnotationAwareAspectJAutoProxyCreator的includePatterns属性中，
+		// Spring在判断一个类是否需要进行代理的时候会判断当前bean的名称是否与includePatterns中的
+		// 正则表达式相匹配，如果不匹配，则不进行代理
+
 		ManagedList<TypedStringValue> includePatterns = new ManagedList<>();
 		NodeList childNodes = element.getChildNodes();
 		for (int i = 0; i < childNodes.getLength(); i++) {
 			Node node = childNodes.item(i);
 			if (node instanceof Element) {
 				Element includeElement = (Element) node;
+				// 解析子标签中的name属性
 				TypedStringValue valueHolder = new TypedStringValue(includeElement.getAttribute("name"));
 				valueHolder.setSource(parserContext.extractSource(includeElement));
 				includePatterns.add(valueHolder);
 			}
 		}
+
+		// 将解析到的name属性设置到AnnotationAwareAspectJAutoProxyCreator的includePatterns属性中
 		if (!includePatterns.isEmpty()) {
 			includePatterns.setSource(parserContext.extractSource(element));
 			beanDef.getPropertyValues().add("includePatterns", includePatterns);

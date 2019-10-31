@@ -49,6 +49,34 @@ import org.springframework.util.Assert;
 @SuppressWarnings("serial")
 public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorAutoProxyCreator {
 
+	/**
+	 * 这个类的继承结构可以发现其实现了InstantiationAwareBeanPostProcessor和BeanPostProcessor两个接口
+	 * 并且分别实现了下面两个方法：
+	 * ①：在Spring实例化一个bean之前执行，如果这里能够返回目标bean对象，那么这里就直接使用该对象，
+	 * Spring不会继续生成目标bean对象，这种方式可以实现自定义的bean对象
+	 * 实现位于父类AbstractAutoProxyCreator中
+	 * public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
+	 *     default Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName)
+	 *         throws BeansException {
+	 *         return null;
+	 *     }
+	 * }
+	 * ②：在Spring实例化一个bean之后执行，主要作用是对已经生成的bean进行一定的处理
+	 * public interface BeanPostProcessor {
+	 * 	default Object postProcessAfterInitialization(Object bean, String beanName)
+	 *         throws BeansException {
+	 * 		return bean;
+	 * 	}
+	 * }
+	 *
+	 * AnnotationAwareAspectJAutoProxyCreator对这两个方法都进行了重写，对于重写的第一个方法，
+	 * 其主要目的在于如果用户使用了自定义的TargetSource对象，则直接使用该对象生成目标对象，而不会使用Spring的默认逻辑生成目标对象，
+	 * 并且这里会判断各个切面逻辑是否可以应用到当前bean上，如果可以，则直接应用，
+	 * 也就是说TargetSource为使用者在Aop中提供了一个自定义生成目标bean逻辑的方式，并且会应用相应的切面逻辑。
+	 * 对于第二个方法，其主要作用在于Spring生成某个bean之后，将相关的切面逻辑应用到该bean上。
+	 *
+	 */
+
 	@Nullable
 	private List<Pattern> includePatterns;
 

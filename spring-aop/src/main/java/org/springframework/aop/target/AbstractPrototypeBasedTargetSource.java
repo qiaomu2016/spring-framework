@@ -48,6 +48,7 @@ public abstract class AbstractPrototypeBasedTargetSource extends AbstractBeanFac
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+		// 继承自BeanFactoryAware接口，将当前Spring使用的BeanFactory传进来
 		super.setBeanFactory(beanFactory);
 
 		// Check whether the target bean is defined as prototype.
@@ -63,6 +64,9 @@ public abstract class AbstractPrototypeBasedTargetSource extends AbstractBeanFac
 	 * @throws BeansException if bean creation failed
 	 */
 	protected Object newPrototypeInstance() throws BeansException {
+		// 使用BeanFactory获取目标bean的对象，getTargetBeanName()方法将返回目标bean的名称，
+		// 由于目标bean是prototype类型的，因而这里也就可以通过BeanFactory获取prototype类型的bean
+		// 这也是PrototypeTargetSource能够生成prototype类型的bean的根本原因
 		if (logger.isDebugEnabled()) {
 			logger.debug("Creating new instance of bean '" + getTargetBeanName() + "'");
 		}
@@ -74,6 +78,8 @@ public abstract class AbstractPrototypeBasedTargetSource extends AbstractBeanFac
 	 * @param target the bean instance to destroy
 	 */
 	protected void destroyPrototypeInstance(Object target) {
+		// 如果生成的bean使用完成，则会调用当前方法销毁目标bean，由于目标bean可能实现了DisposableBean
+		// 接口，因而这里销毁bean的方式就是调用其实现的该接口的方法，从而销毁目标bean
 		if (logger.isDebugEnabled()) {
 			logger.debug("Destroying instance of bean '" + getTargetBeanName() + "'");
 		}

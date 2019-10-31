@@ -72,7 +72,7 @@ public abstract class AopConfigUtils {
 	@Nullable
 	public static BeanDefinition registerAutoProxyCreatorIfNecessary(
 			BeanDefinitionRegistry registry, @Nullable Object source) {
-
+		// 注册AnnotationAwareAspectJAutoProxyCreator类型的BeanDefinition
 		return registerOrEscalateApcAsRequired(InfrastructureAdvisorAutoProxyCreator.class, registry, source);
 	}
 
@@ -120,7 +120,8 @@ public abstract class AopConfigUtils {
 
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 
-		// 定义有AUTO_PROXY_CREATOR_BEAN_NAME="org.springframework.aop.config.internalAutoProxyCreator"
+		// 如果已经注册过AnnotationAwareAspectJAutoProxyCreator的Definition，且和当前将要注册的BeanDefinition是同一个类型，则不再注册;
+		// 如果不同，则判断其优先级，如果已经注册过的要比当前将要注册的BeanDefinition要高，则将其类名设置为当前要注册的BeanDefinition的名称
 		if (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) {
 			// 如果容器中已经存在自动代理构建器，则比较两个构建器的优先级
 			BeanDefinition apcDefinition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);
@@ -134,8 +135,9 @@ public abstract class AopConfigUtils {
 			}
 			return null;
 		}
-		// 如果容器中还没有自动代理构建器
-		// 则创建构建器相应的BeanDefinition对象
+
+		// 如果不存在已经注册的Aop的bean，则生成一个，并且设置其执行优先级为最高优先级，并且标识
+		// 该bean为Spring的系统Bean，设置完之后则对该bean进行注册
 		RootBeanDefinition beanDefinition = new RootBeanDefinition(cls);
 		beanDefinition.setSource(source);
 		beanDefinition.getPropertyValues().add("order", Ordered.HIGHEST_PRECEDENCE);
@@ -143,6 +145,12 @@ public abstract class AopConfigUtils {
 		// 向容器中注册代理构建器的BeanDefinition对象
 		registry.registerBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME, beanDefinition);
 		return beanDefinition;
+
+		// 可以看到，在真正生成AnnotationAwareAspectJAutoProxyCreator的BeanDefinition的时候，
+		// 首先会判断是否已经生成过该bean，这里不会将已经生成的bean进行覆盖；如果没有生成该bean，则创建一个并进行注册。
+		// 这里需要说明的是，Spring注册该bean的时候使用的order是Ordered.HIGHEST_PRECEDENCE，
+		// 这么设置的原因在于Spring使用该bean进行切面逻辑的织入，因而这个bean必须在所有用户自定义的bean实例化之前进行实例化，
+		// 而用户自定义的bean的实例化优先级是比较低的，这样才能实现织入代理逻辑的功能。
 	}
 
 	private static int findPriorityForClass(Class<?> clazz) {
