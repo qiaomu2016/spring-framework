@@ -67,6 +67,7 @@ final class PostProcessorRegistrationDelegate {
 			// BeanDefinitionRegistryPostProcessor 集合
 			List<BeanDefinitionRegistryPostProcessor> registryProcessors = new ArrayList<>();
 
+			// ①：处理自定义的BeanFactoryPostProcessor
 			// 迭代注册的 beanFactoryPostProcessors (注：为手动调用applicationContext.addBeanFactoryPostProcessor()添加的)
 			for (BeanFactoryPostProcessor postProcessor : beanFactoryPostProcessors) {
 				// 如果是 BeanDefinitionRegistryPostProcessor，则调用 postProcessBeanDefinitionRegistry 进行注册，
@@ -89,12 +90,15 @@ final class PostProcessorRegistrationDelegate {
 			// Separate between BeanDefinitionRegistryPostProcessors that implement
 			// PriorityOrdered, Ordered, and the rest.
 			// 用于保存当前处理的 BeanDefinitionRegistryPostProcessor
+			// ②：这个currentRegistryProcessors 放的是Spring内部自已实现的BeanDefinitionRegistryPostProcessor接口的对象
 			List<BeanDefinitionRegistryPostProcessor> currentRegistryProcessors = new ArrayList<>();
 
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
 			// 首先处理实现了 PriorityOrdered (有限排序接口)的 BeanDefinitionRegistryPostProcessor
 			// 获取Spring框架之前注册的BeanDefinition,即:
 			// org.springframework.context.annotation.internalConfigurationAnnotationProcessor ->  ConfigurationClassPostProcessor
+			// 这个地方可以得到一个BeanDefinitionRegistryPostProcessor，因为是Spring默认在最开始自已注册的（即ConfigurationClassPostProcessor）
+			// 为什么要在最开始注册这个呢？因为Spring的工厂需要做解析、扫描等功能，而这些功能都是需要在Spring工厂初始化完成之前执行，要么在工厂最开始的时候、要么在工厂初始化之中，反正不能在之后。
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
@@ -105,7 +109,7 @@ final class PostProcessorRegistrationDelegate {
 			}
 			// 排序
 			sortPostProcessors(currentRegistryProcessors, beanFactory);
-			// 加入registryProcessors集合
+			// 合并list，加入registryProcessors集合
 			registryProcessors.addAll(currentRegistryProcessors);
 			// 调用所有实现了 PriorityOrdered 的 BeanDefinitionRegistryPostProcessors 的 postProcessBeanDefinitionRegistry()
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);

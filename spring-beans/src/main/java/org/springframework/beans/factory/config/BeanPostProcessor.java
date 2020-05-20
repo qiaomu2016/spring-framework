@@ -20,6 +20,9 @@ import org.springframework.beans.BeansException;
 import org.springframework.lang.Nullable;
 
 /**
+ * BeanPostProcessor是Spring框架提供的一个扩展类点（不止一种），通过实现BeanPostProcessor接口，程序员就可插手bean的实例化过程，
+ * 从而减轻BeanFactory的负担，值得说明的是这个接口可以配置多个，会形成一个列表，然后依次执行。
+ * 比如AOP就是在Bean实例化后期将切面逻辑织入Bean实例中，AOP也正是通过BeanPostProcessor（AbstractAutoProxyCreator）和IOC容器建立起联系
  * Factory hook that allows for custom modification of new bean instances,
  * e.g. checking for marker interfaces or wrapping them with proxies.
  *
@@ -79,6 +82,54 @@ public interface BeanPostProcessor {
 	 */
 
 	/**
+	 * Spring内置了一些很有用的BeanPostProcessor接口实现类。
+	 * 比如有AutowiredAnnotationBeanPostProcessor、RequiredAnnotationBeanPostProcessor、CommonAnnotationBeanPostProcessor、
+	 * EventListenerMethodProcessor等。这些Processor会处理各自的场景。
+	 * 正是有了这些processor，把bean的构造过程中的一部分功能分配给了这些processor处理，减轻了BeanFactory的负担。
+	 * 而且添加一些新的功能也很方便，只需要实现BeanPostProcessor接口，并在实现类上添加@Component注解即可。
+	 * 1）ApplicationContextAwareProcessor
+	 * Spring容器的refresh方法内部调用prepareBeanFactory方法，prepareBeanFactory方法会添加ApplicationContextAwareProcessor到BeanFactory中。
+	 * 这个Processor的作用在于为实现*Aware接口的bean调用该Aware接口定义的方法，并传入对应的参数。
+	 * 比如实现EnvironmentAware接口的bean在该Processor内部会调用EnvironmentAware接口的setEnvironment方法，并把Spring容器内部的ConfigurableEnvironment传递进去。
+	 *
+	 * 2）CommonAnnotationBeanPostProcessor
+	 * 在AnnotationConfigUtils类的registerAnnotationConfigProcessors方法中被封装成RootBeanDefinition并注册到Spring容器中。
+	 * registerAnnotationConfigProcessors方法在一些比如扫描类的场景下注册。
+	 * 比如 context:component-scan 标签或 context:annotation-config 标签的使用，或ClassPathBeanDefinitionScanner扫描器的使用、AnnotatedBeanDefinitionReader读取器的使用。
+	 * 主要处理@Resource、@PostConstruct和@PreDestroy注解的实现。
+	 *
+	 * 3）AutowiredAnnotationBeanPostProcessor
+	 * 跟CommonAnnotationBeanPostProcessor一样，在AnnotationConfigUtils类的registerAnnotationConfigProcessors方法被注册到Spring容器中。
+	 * 主要处理@Autowired、@Value、@Lookup和@Inject注解的实现，处理逻辑跟CommonAnnotationBeanPostProcessor类似。
+	 *
+	 * 4）RequiredAnnotationBeanPostProcessor
+	 * 跟CommonAnnotationBeanPostProcessor一样，在AnnotationConfigUtils类的registerAnnotationConfigProcessors方法被注册到Spring容器中。
+	 * 主要处理@Required注解的实现(@Required注解只能修饰方法)
+	 *
+	 * 5）AbstractAutoProxyCreator
+	 * 这是一个抽象类，实现了SmartInstantiationAwareBeanPostProcessor接口。主要用于aop在Spring中的应用
+	 *
+	 * 6）InstantiationAwareBeanPostProcessor
+	 * InstantiationAwareBeanPostProcessor接口继承BeanPostProcessor接口，它内部提供了3个方法，再加上BeanPostProcessor接口内部的2个方法，所以实现这个接口需要实现5个方法。
+	 * InstantiationAwareBeanPostProcessor接口的主要作用在于目标对象的实例化过程中需要处理的事情，包括实例化对象的前后过程以及实例的属性设置
+	 * ①：postProcessBeforeInstantiation方法是最先执行的方法，它在目标对象实例化之前调用，该方法的返回值类型是Object，我们可以返回任何类型的值。
+	 * 由于这个时候目标对象还未实例化，所以这个返回值可以用来代替原本该生成的目标对象的实例(比如代理对象)。
+	 * 如果该方法的返回值代替原本该生成的目标对象，后续只有postProcessAfterInitialization方法会调用，其它方法不再调用；否则按照正常的流程走
+	 * ②：postProcessAfterInstantiation方法在目标对象实例化之后调用，这个时候对象已经被实例化，但是该实例的属性还未被设置，都是null。
+	 * 如果该方法返回false，会忽略属性值的设置；如果返回true，会按照正常流程设置属性值
+	 * ③：postProcessPropertyValues方法对属性值进行修改(这个时候属性值还未被设置，但是我们可以修改原本该设置进去的属性值)。
+	 * 如果postProcessAfterInstantiation方法返回false，该方法不会被调用。可以在该方法内对属性值进行修改
+	 * ④：父接口BeanPostProcessor的2个方法postProcessBeforeInitialization和postProcessAfterInitialization都是在目标对象被实例化之后，并且属性也被设置之后调用的
+	 * 注：Instantiation表示实例化，Initialization表示初始化。实例化的意思在对象还未生成，初始化的意思在对象已经生成
+	 */
+
+	/**
+	 * postProcessBeforeInitialization和postProcessAfterInitialization方法被调用的时候。这个时候bean已经被实例化，并且所有该注入的属性都已经被注入，是一个完整的bean。
+	 * 这2个方法的返回值可以是原先生成的实例bean，或者使用wrapper包装这个实例
+	 */
+
+	/**
+	 * bean在初始化之前需要调用的方法
 	 * Apply this BeanPostProcessor to the given new bean instance <i>before</i> any bean
 	 * initialization callbacks (like InitializingBean's {@code afterPropertiesSet}
 	 * or a custom init-method). The bean will already be populated with property values.
@@ -97,6 +148,7 @@ public interface BeanPostProcessor {
 	}
 
 	/**
+	 * bean在初始化之后需要调用的方法
 	 * Apply this BeanPostProcessor to the given new bean instance <i>after</i> any bean
 	 * initialization callbacks (like InitializingBean's {@code afterPropertiesSet}
 	 * or a custom init-method). The bean will already be populated with property values.

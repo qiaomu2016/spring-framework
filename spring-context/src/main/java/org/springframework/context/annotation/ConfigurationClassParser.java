@@ -226,6 +226,7 @@ class ConfigurationClassParser {
 			return;
 		}
 
+		// 处理Imported情况
 		ConfigurationClass existingClass = this.configurationClasses.get(configClass);
 		if (existingClass != null) {
 			if (configClass.isImported()) {
@@ -268,7 +269,7 @@ class ConfigurationClassParser {
 
 		/**
 		 * 解析的总体过程：
-		 * 1、从Bean工厂找出所有Configuratio类加入configCandidates列表中，
+		 * 1、从Bean工厂找出所有Configuration类加入configCandidates列表中，
 		 * 		所谓Configuratio类就是被@Configuration注解的类或者包含@Bean、@Component、@ComponentScan、@Import、@ImportResource注解的类。
 		 * 2、根据@Order对configCandidates列表进行排序
 		 * 3、遍历configCandidates，使用委托类ConfigurationClassParser解析配置项，
@@ -305,10 +306,11 @@ class ConfigurationClassParser {
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
 			for (AnnotationAttributes componentScan : componentScans) {
 				// The config class is annotated with @ComponentScan -> perform the scan immediately
-				// 解析@ComponentScan
+				// 解析@ComponentScan （扫描普通类）
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
+				// 检查扫描出来的类当中是否还有配置类
 				for (BeanDefinitionHolder holder : scannedBeanDefinitions) {
 					BeanDefinition bdCand = holder.getBeanDefinition().getOriginatingBeanDefinition();
 					if (bdCand == null) {

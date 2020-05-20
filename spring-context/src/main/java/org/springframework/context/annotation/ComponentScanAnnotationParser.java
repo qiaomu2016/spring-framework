@@ -121,6 +121,8 @@ class ComponentScanAnnotationParser {
 			}
 		}
 
+		// 给BeanDefinitionDefaults对象的属性赋值
+		// 此处相当于为所有的BeanDefinition的通用属性赋初始值（默认值），如果具体的BeanDefinition有配置该属性，就以具体的BeanDefinition配置为主
 		boolean lazyInit = componentScan.getBoolean("lazyInit");
 		if (lazyInit) {
 			scanner.getBeanDefinitionDefaults().setLazyInit(true);

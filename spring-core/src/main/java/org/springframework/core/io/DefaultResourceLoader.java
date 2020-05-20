@@ -39,7 +39,7 @@ import org.springframework.util.StringUtils;
  * <p>Will return a {@link UrlResource} if the location value is a URL,
  * and a {@link ClassPathResource} if it is a non-URL path or a
  * "classpath:" pseudo-URL.
- *
+ * 与 AbstractResource 相似，org.springframework.core.io.DefaultResourceLoader 是 ResourceLoader 的默认实现
  * @author Juergen Hoeller
  * @since 10.03.2004
  * @see FileSystemResourceLoader
@@ -50,10 +50,21 @@ public class DefaultResourceLoader implements ResourceLoader {
 	@Nullable
 	private ClassLoader classLoader;
 
+	/**
+	 * ProtocolResolver 集合
+	 * ProtocolResolver ，用户自定义协议资源解决策略，作为 DefaultResourceLoader 的 SPI：它允许用户自定义资源加载协议，而不需要继承 ResourceLoader 的子类。
+	 */
 	private final Set<ProtocolResolver> protocolResolvers = new LinkedHashSet<>(4);
 
 	private final Map<Class<?>, Map<Resource, ?>> resourceCaches = new ConcurrentHashMap<>(4);
 
+	/**
+	 * 构造函数
+	 * 它接收 ClassLoader 作为构造函数的参数，或者使用不带参数的构造函数。
+	 *
+	 * 在使用不带参数的构造函数时，使用的 ClassLoader 为默认的 ClassLoader（一般 Thread.currentThread()#getContextClassLoader() ）。
+	 * 在使用带参数的构造函数时，可以通过 ClassUtils#getDefaultClassLoader()获取。
+	 */
 
 	/**
 	 * Create a new DefaultResourceLoader.
@@ -76,6 +87,7 @@ public class DefaultResourceLoader implements ResourceLoader {
 
 
 	/**
+	 * 也可以调用 #setClassLoader() 方法 指定具体的 ClassLoader
 	 * Specify the ClassLoader to load class path resources with, or {@code null}
 	 * for using the thread context class loader at the time of actual resource access.
 	 * <p>The default is that ClassLoader access will happen using the thread context
@@ -140,14 +152,23 @@ public class DefaultResourceLoader implements ResourceLoader {
 	}
 
 
+	/**
+	 * ResourceLoader 中最核心的方法为 #getResource(String location) ，它根据提供的 location 返回相应的 Resource 。
+	 * 而 DefaultResourceLoader 对该方法提供了核心实现（因为，它的两个子类都没有提供覆盖该方法，
+	 * 所以可以断定 ResourceLoader 的资源加载策略就封装在 DefaultResourceLoader 中)
+	 */
 	@Override
 	public Resource getResource(String location) {
 		Assert.notNull(location, "Location must not be null");
 
 		// ProtocolResolver：用户自定义协议资源解决策略，
 		// 作为 DefaultResourceLoader 的 SPI：它允许用户自定义资源加载协议，而不需要继承 ResourceLoader 的子类。
+		// 在介绍 Resource 时，提到如果要实现自定义 Resource，我们只需要继承 AbstractResource 即可，
+		// 但是有了 ProtocolResolver 后，我们不需要直接继承 DefaultResourceLoader，改为实现 ProtocolResolver 接口也可以实现自定义的 ResourceLoader。
+
 		// 在 Spring 中你会发现该接口并没有实现类，它需要用户自定义，自定义的 Resolver 如何加入 Spring 体系呢？
 		// 调用 DefaultResourceLoader#addProtocolResolver(ProtocolResolver) 方法即可
+
 
 		// 首先，通过 ProtocolResolver 来加载资源
 		for (ProtocolResolver protocolResolver : this.protocolResolvers) {
@@ -159,6 +180,7 @@ public class DefaultResourceLoader implements ResourceLoader {
 
 		// 其次，以 / 开头，返回 ClassPathContextResource 类型的资源
 		if (location.startsWith("/")) {
+			// 调用 #getResourceByPath() 方法，构造 ClassPathContextResource 类型资源并返回
 			return getResourceByPath(location);
 		}
 		// 再次，以 classpath: 开头，返回 ClassPathResource 类型的资源
@@ -168,6 +190,7 @@ public class DefaultResourceLoader implements ResourceLoader {
 		// 然后，根据是否为文件 URL ，是则返回 FileUrlResource 类型的资源，否则返回 UrlResource 类型的资源
 		else {
 			try {
+				// 如：file:/Users/aa.txt  、  http://www.baidu.com
 				// Try to parse the location as a URL...
 				URL url = new URL(location);
 				return (ResourceUtils.isFileURL(url) ? new FileUrlResource(url) : new UrlResource(url));

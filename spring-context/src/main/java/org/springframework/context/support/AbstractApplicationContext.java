@@ -677,9 +677,10 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 配置其标准的特征，比如上下文的加载器ClassLoader和post-processors回调
 	 * Configure the factory's standard context characteristics,
 	 * such as the context's ClassLoader and post-processors.
-	 * @param beanFactory the BeanFactory to configure
+	 * @param beanFactory the BeanFactory to configure 此处的beanFactory为DefaultListableBeanFactory
 	 */
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 
@@ -741,6 +742,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// BeanFactory interface not registered as resolvable(解析) type in a plain(普通) factory.
 		// MessageSource registered (and found for autowiring) as a bean.
 		// 设置几个自动装配的特殊规则
+		// 依赖替换（如：代码中依赖BeanFactory对象，此时会把 beanFactory这个对象注入给它）
 		beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);
 		beanFactory.registerResolvableDependency(ResourceLoader.class, this);
 		beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, this);
@@ -797,6 +799,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
 
 		// 激活各种BeanFactory处理器
+		// 注：getBeanFactoryPostProcessors()是获取自定义的（就是程序员自已写的，并且没有交给Spring管理，就是没有加上@Component注解）
+		// 即如通过代码： applicationContext.addBeanFactoryPostProcessor();手动添加的BeanFactoryPostProcessor
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime

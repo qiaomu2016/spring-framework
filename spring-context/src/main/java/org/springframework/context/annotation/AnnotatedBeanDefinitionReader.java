@@ -214,10 +214,11 @@ public class AnnotatedBeanDefinitionReader {
 			@Nullable Class<? extends Annotation>[] qualifiers, BeanDefinitionCustomizer... definitionCustomizers) {
 
 		// 先把此实体类型转换为一个BeanDefinition
+		// 根据指定的bean创建一个AnnotatedGenericBeanDefinition，它可以理解为一个数据结构，包含了类的元数据信息，如scope，lazy等
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(annotatedClass);
 
 		// abd.getMetadata() 元数据包括：注解信息、是否内部类、类Class基本信息等等
-		// 此处由conditionEvaluator#shouldSkip去过滤，此Class是否是配置类。
+		// 此处由conditionEvaluator#shouldSkip去过滤此Class是否是配置类
 		// 判断是否需要跳过注解，spring中有一个@Condition注解，当不满足条件，这个bean就不会被解析
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
@@ -253,11 +254,14 @@ public class AnnotatedBeanDefinitionReader {
 				}
 			}
 		}
+		// 这段代码是spring5.0以后新加入的，Spring 5允许使用lambda 表达式来自定义注册一个 bean，基本上不会使用
 		for (BeanDefinitionCustomizer customizer : definitionCustomizers) {
 			customizer.customize(abd);
 		}
 		// 把AnnotatedGenericBeanDefinition数据结构和beanName封装到一个对象中
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
+		// ScopedProxyMode 这个知识点比较复杂，需要结合web去理解
+		// 如：@Scope(value=WebApplicationContext.SCOPE_SESSION,proxyMode=ScopedProxyMode.INTERFACES)
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 
 		// 注册，最终会调用DefaultListableBeanFactory中的registerBeanDefinition方法去注册，

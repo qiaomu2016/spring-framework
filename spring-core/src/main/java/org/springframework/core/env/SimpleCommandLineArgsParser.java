@@ -60,22 +60,29 @@ class SimpleCommandLineArgsParser {
 	public CommandLineArgs parse(String... args) {
 		CommandLineArgs commandLineArgs = new CommandLineArgs();
 		for (String arg : args) {
+			// 选项参数解析（以--开头）
 			if (arg.startsWith("--")) {
+				// 获得key=value或key值
 				String optionText = arg.substring(2, arg.length());
 				String optionName;
 				String optionValue = null;
+				// 如果是key=value格式则进行解析
 				if (optionText.contains("=")) {
 					optionName = optionText.substring(0, optionText.indexOf('='));
 					optionValue = optionText.substring(optionText.indexOf('=')+1, optionText.length());
 				}
 				else {
+					// 如果是仅有key（--foo）
 					optionName = optionText;
 				}
+				// 如果optionName为空或者optionValue不为空但optionName为空则抛出异常
 				if (optionName.isEmpty() || (optionValue != null && optionValue.isEmpty())) {
 					throw new IllegalArgumentException("Invalid argument syntax: " + arg);
 				}
+				// 封装入CommandLineArgs
 				commandLineArgs.addOptionArg(optionName, optionValue);
 			}
+			// 非选项参数
 			else {
 				commandLineArgs.addNonOptionArg(arg);
 			}

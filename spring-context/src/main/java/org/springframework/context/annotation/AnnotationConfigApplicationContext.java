@@ -52,17 +52,39 @@ import org.springframework.util.Assert;
  */
 public class AnnotationConfigApplicationContext extends GenericApplicationContext implements AnnotationConfigRegistry {
 
+	/**
+	 * 将对象交由Spring管理的方式：
+	 * 1. 使用XML配置文件<bean>标签；
+	 * 2. 在自定义类上使用@Component注解（将自定义对象交由Spring管理）
+	 * 3. 使用FactoryBean<T>灵活的创建出对象，然后使用XML或者@Component注解交由Spring管理。
+	 * 4. 使用@Bean注解（灵活的创建对象，并放入Spring容器中）；
+	 */
+
+	/**
+	 * 用于读取加了注解的Bean的 BeanDefinition的读取器
+	 */
 	private final AnnotatedBeanDefinitionReader reader;
 
+	/**
+	 * 用于扫描所有加了注解的Bean的 BeanDefinition扫描器
+	 */
 	private final ClassPathBeanDefinitionScanner scanner;
 
 
 	/**
+	 * 初始化一个bean的读取器和扫描器
+	 * 如果调用该默认的构造方法，需要后续通过调用其register()去注册配置类（javaconfig）,并调用refresh()方法刷新容器，
+	 * 触发容器对注解Bean的载入、解析和注册的过程
+	 * 参考另一个构造方法：AnnotationConfigApplicationContext(Class<?>... annotatedClasses)
 	 * Create a new AnnotationConfigApplicationContext that needs to be populated
 	 * through {@link #register} calls and then manually {@linkplain #refresh refreshed}.
 	 */
 	public AnnotationConfigApplicationContext() {
+		// 注：在reader内部扫描类时，会new一个新的ClassPathBeanDefinitionScanner用行扫描
 		this.reader = new AnnotatedBeanDefinitionReader(this);
+		// scanner可以用来扫描包或者类，继而把对应扫描到的类解析成BeanDefinition
+		// 但是实际上我们扫描包工作不是当前这个scanner对象，而是spring自已在内部重新new的一个ClassPathBeanDefinitionScanner
+		// 因为这里的scanner仅仅是为了程序员能够在外部调用AnnotationConfigApplicationContext对象的scan()方法;
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -77,12 +99,15 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	}
 
 	/**
+	 * 这个构造方法需要传入一个被javaconfig注解了的配置类
+	 * 然后会把这个注解了的javaconfig的类 通过注解读取器 读取后进行解析
 	 * Create a new AnnotationConfigApplicationContext, deriving bean definitions
 	 * from the given annotated classes and automatically refreshing the context.
 	 * @param annotatedClasses one or more annotated classes,
 	 * e.g. {@link Configuration @Configuration} classes
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
+		// 在自已的无参构造方法中初始化一个读取器和扫描器
 		this();
 		register(annotatedClasses);
 		refresh();
@@ -144,6 +169,8 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	//---------------------------------------------------------------------
 
 	/**
+	 * 注册一个或多个 被注解的类到容器中，但是注册之后需要手动调用refresh()方法触发容器去解析
+	 * 此处有两个意思：他可以注册一个配置类，也可以单独注册一个bean
 	 * Register one or more annotated classes to be processed.
 	 * <p>Note that {@link #refresh()} must be called in order for the context
 	 * to fully process the new classes.

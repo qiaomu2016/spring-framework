@@ -211,7 +211,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	private final ResourceLoader resourceLoader;
 
 	/**
-	 * Ant路径匹配器
+	 * 默认为 AntPathMatcher 对象，用于支持 Ant 类型的路径匹配。
 	 */
 	private PathMatcher pathMatcher = new AntPathMatcher();
 
@@ -279,6 +279,10 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	}
 
 
+	/**
+	 * 该方法，直接委托给相应的 ResourceLoader 来实现。
+	 * 所以，如果我们在实例化的 PathMatchingResourcePatternResolver 的时候，如果未指定 ResourceLoader 参数的情况下，那么在加载资源时，其实就是 DefaultResourceLoader 的过程。
+	 */
 	@Override
 	public Resource getResource(String location) {
 		return getResourceLoader().getResource(location);
@@ -332,17 +336,23 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	 */
 	protected Resource[] findAllClassPathResources(String location) throws IOException {
 		String path = location;
+		// 去除首个 /
 		if (path.startsWith("/")) {
 			path = path.substring(1);
 		}
+		// 真正执行加载所有 classpath 资源
 		Set<Resource> result = doFindAllClassPathResources(path);
 		if (logger.isTraceEnabled()) {
 			logger.trace("Resolved classpath location [" + location + "] to resources " + result);
 		}
+		// 转换成 Resource 数组返回
 		return result.toArray(new Resource[0]);
 	}
 
 	/**
+	 * 利用 ClassLoader 来加载指定路径下的资源，不论它是在 class 路径下还是在 jar 包中。
+	 * 如果我们传入的路径为空或者 /，则会调用 #addAllClassLoaderJarRoots(...) 方法，加载所有的 jar 包
+	 *
 	 * Find all class location resources with the given path via the ClassLoader.
 	 * Called by {@link #findAllClassPathResources(String)}.
 	 * @param path the absolute path within the classpath (never a leading slash)
@@ -353,6 +363,9 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 		Set<Resource> result = new LinkedHashSet<>(16);
 		ClassLoader cl = getClassLoader();
 		// 根据ClassLoader加载路径下的所有资源
+		// 在加载资源过程时，如果在构造 PathMatchingResourcePatternResolver 实例的时候如果传入了 ClassLoader，则调用该 ClassLoader 的 #getResources() 方法，
+		// 否则调用 ClassLoader#getSystemResources(path) 方法
+		// java.lang.ClassLoader.getResources 逻辑：如果当前父类加载器不为 null ，则通过父类向上迭代获取资源，否则调用 #getBootstrapResources() 。这里是不是特别熟悉，(^▽^)。
 		Enumeration<URL> resourceUrls = (cl != null ? cl.getResources(path) : ClassLoader.getSystemResources(path));
 		while (resourceUrls.hasMoreElements()) {
 			URL url = resourceUrls.nextElement();
@@ -423,6 +436,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 		if (classLoader != null) {
 			try {
 				// Hierarchy traversal...
+				// 层次结构遍历 父加载器 classLoader.getParent()
 				addAllClassLoaderJarRoots(classLoader.getParent(), result);
 			}
 			catch (Exception ex) {
@@ -435,6 +449,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	}
 
 	/**
+	 * 从Java环境变量配置的 Java类路径 CLASSPATH 中 加载 jar
 	 * Determine jar file references from the "java.class.path." manifest property and add them
 	 * to the given set of resources in the form of pointers to the root of the jar file content.
 	 * @param result the set of resources to add jar roots to
@@ -509,6 +524,11 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	 * @see org.springframework.util.PathMatcher
 	 */
 	protected Resource[] findPathMatchingResources(String locationPattern) throws IOException {
+
+		// 方法有点儿长，但是思路还是很清晰的，主要分两步：
+		// ①：确定目录，获取该目录下得所有资源。
+		// ②：在所获得的所有资源后，进行迭代匹配获取我们想要的资源。
+
 		// 获取根目录，eg: Will return "/WEB-INF/" for the pattern "/WEB-INF/*.xml"
 		String rootDirPath = determineRootDir(locationPattern);
 		// 获取子目录
@@ -566,12 +586,14 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 		// 根目录结束位置
 		int rootDirEnd = location.length();
 		// 在从冒号开始到最后的字符串中，循环判断是否包含通配符，如果包含，则截断最后一个由”/”分割的部分。
+		// 例如：在我们路径中，就是最后的ap?-context.xml这一段。再循环判断剩下的部分，直到剩下的路径中都不包含通配符。
 		// eg:
 		// classpath*:test/cc*/spring-*.xml  -> classpath*:test/
 		// classpath*:test/aa/spring-*.xml   -> classpath*:test/aa/
 		while (rootDirEnd > prefixEnd && getPathMatcher().isPattern(location.substring(prefixEnd, rootDirEnd))) {
 			rootDirEnd = location.lastIndexOf('/', rootDirEnd - 2) + 1;
 		}
+		// 如果查找完成后，rootDirEnd = 0 了，则将之前赋值的 prefixEnd 的值赋给 rootDirEnd ，也就是冒号的后一位
 		if (rootDirEnd == 0) {
 			rootDirEnd = prefixEnd;
 		}
