@@ -153,9 +153,14 @@ final class PostProcessorRegistrationDelegate {
 				currentRegistryProcessors.clear();
 			}
 
+			// 【上面的逻辑是处理 BeanDefinitionRegistryPostProcessor的 postProcessBeanDefinitionRegistry()方法
+			// 注：BeanDefinitionRegistryPostProcessor的父类BeanFactoryPostProcessor的回调方法是还没有执行的
+			// 下面才开始处理 BeanFactoryPostProcessor的回调方法：postProcessBeanFactory()，包含了BeanDefinitionRegistryPostProcessor的父类方法】
+
 			// Now, invoke the postProcessBeanFactory callback of all processors handled so far.
 			// 调用所有 BeanDefinitionRegistryPostProcessor (包括手动注册和通过配置文件注册)
 			// 和 BeanFactoryPostProcessor(只有手动注册)的回调函数(postProcessBeanFactory())
+			// 此处的 registryProcessors -> Spring自带的 ConfigurationClassPostProcessor
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
 		}

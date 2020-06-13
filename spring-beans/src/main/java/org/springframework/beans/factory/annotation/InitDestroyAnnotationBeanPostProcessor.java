@@ -79,9 +79,15 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 	protected transient Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * CommonAnnotationBeanPostProcessor在初始化时向里面放置了@PostConstruct注解
+	 */
 	@Nullable
 	private Class<? extends Annotation> initAnnotationType;
 
+	/**
+	 * CommonAnnotationBeanPostProcessor在初始化时向里面放置了@PreDestroy注解
+	 */
 	@Nullable
 	private Class<? extends Annotation> destroyAnnotationType;
 
@@ -205,27 +211,32 @@ public class InitDestroyAnnotationBeanPostProcessor
 			final List<LifecycleElement> currDestroyMethods = new ArrayList<>();
 
 			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
+				// 查看方法上是否有@PostConstruct注解存在
 				if (this.initAnnotationType != null && method.isAnnotationPresent(this.initAnnotationType)) {
+					// 如果有把他封装成LifecycleElement对象，储存起来
 					LifecycleElement element = new LifecycleElement(method);
 					currInitMethods.add(element);
 					if (logger.isTraceEnabled()) {
 						logger.trace("Found init method on class [" + clazz.getName() + "]: " + method);
 					}
 				}
+				// 查看方法上是否有@PreDestroy注解存在
 				if (this.destroyAnnotationType != null && method.isAnnotationPresent(this.destroyAnnotationType)) {
+					// 如果有把他封装成LifecycleElement对象，储存起来
 					currDestroyMethods.add(new LifecycleElement(method));
 					if (logger.isTraceEnabled()) {
 						logger.trace("Found destroy method on class [" + clazz.getName() + "]: " + method);
 					}
 				}
 			});
-
+			// 初始化方法父类早于子类
 			initMethods.addAll(0, currInitMethods);
+			// 销毁方法父类晚于子类
 			destroyMethods.addAll(currDestroyMethods);
 			targetClass = targetClass.getSuperclass();
 		}
 		while (targetClass != null && targetClass != Object.class);
-
+		// 封装成LifecycleMetadata对象返回
 		return new LifecycleMetadata(clazz, initMethods, destroyMethods);
 	}
 

@@ -123,12 +123,15 @@ import java.lang.annotation.Target;
 public @interface EnableAspectJAutoProxy {
 
 	/**
+	 * 控制aop的具体实现方式,为true的话使用CGLIB动态代理，为false的话使用JDK动态代理，默认为false
+	 * 指示是否要创建基于子类(CGLIB)的代理，而不是标准的基于Java接口的代理。默认值是{@code false}
 	 * Indicate whether subclass-based (CGLIB) proxies are to be created as opposed
 	 * to standard Java interface-based proxies. The default is {@code false}.
 	 */
 	boolean proxyTargetClass() default false;
 
 	/**
+	 * 控制代理的暴露方式，解决内部调用不能使用代理的场景，默认为false
 	 * Indicate that the proxy should be exposed by the AOP framework as a {@code ThreadLocal}
 	 * for retrieval via the {@link org.springframework.aop.framework.AopContext} class.
 	 * Off by default, i.e. no guarantees that {@code AopContext} access will work.

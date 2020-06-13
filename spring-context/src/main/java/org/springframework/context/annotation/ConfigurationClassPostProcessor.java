@@ -249,7 +249,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			// Simply call processConfigurationClasses lazily at this point then.
 			processConfigBeanDefinitions((BeanDefinitionRegistry) beanFactory);
 		}
-
+		// CGLIB代理，注：AppConfig 配置类加了@Configuration （full全注解）才会进行CgLib代理
 		enhanceConfigurationClasses(beanFactory);
 		beanFactory.addBeanPostProcessor(new ImportAwareBeanPostProcessor(beanFactory));
 	}
@@ -324,6 +324,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			parser.parse(candidates);
 			parser.validate();
 
+			// parser.parse(candidates)方法不会注册配置类，而是把解析出来的配置类放到 configurationClasses 集合中，
+			// 并且会在下面的 this.reader.loadBeanDefinitions(configClasses) 方法中进行处理
 			Set<ConfigurationClass> configClasses = new LinkedHashSet<>(parser.getConfigurationClasses());
 			configClasses.removeAll(alreadyParsed);
 
@@ -397,11 +399,12 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				configBeanDefs.put(beanName, (AbstractBeanDefinition) beanDef);
 			}
 		}
+		// 没有加@Configuration（全注解）直接返回
 		if (configBeanDefs.isEmpty()) {
 			// nothing to enhance -> return immediately
 			return;
 		}
-
+		// 加了@Configuration（全注解）才会进行CgLib代理
 		ConfigurationClassEnhancer enhancer = new ConfigurationClassEnhancer();
 		for (Map.Entry<String, AbstractBeanDefinition> entry : configBeanDefs.entrySet()) {
 			AbstractBeanDefinition beanDef = entry.getValue();
@@ -411,6 +414,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				// Set enhanced subclass of the user-specified bean class
 				Class<?> configClass = beanDef.resolveBeanClass(this.beanClassLoader);
 				if (configClass != null) {
+					// 完成对全注解类的cglib代理
 					Class<?> enhancedClass = enhancer.enhance(configClass, this.beanClassLoader);
 					if (configClass != enhancedClass) {
 						if (logger.isTraceEnabled()) {
@@ -425,10 +429,62 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				throw new IllegalStateException("Cannot load configuration class: " + beanDef.getBeanClassName(), ex);
 			}
 		}
+
+		//  举例说明：
+		//	@ComponentScan("com.qiaomuer")
+		//	@Configuration
+		//	public class AppConfig{
+		//
+		//		@Bean
+		//		public IndexDao1 indexDao1(){
+		//			return new IndexDao1();
+		//		}
+		//
+		//		@Bean
+		//		public IndexDao indexDao(){
+		//          // ①：如果AppConfig类没有加@Configuration注解，IndexDao1会实例化两次
+		//          // ②：如果AppConfig类加了@Configuration注解，那么IndexDao1是单例的，只实例化一次
+		//          // （因为通过cglib对全注解的配置类进行了增强，在内部调用indexDao1()的时候，会先直接从beanFactory中拿）
+		//			indexDao1();
+		//			return new IndexDao();
+		//		}
+		//
+		//	}
+
+
 	}
 
 
 	private static class ImportAwareBeanPostProcessor extends InstantiationAwareBeanPostProcessorAdapter {
+
+		/*
+		 * ImportAware接口是需要和@Import一起使用的。在@Import作为元注解使用时，通过@Import导入的配置类如果实现了ImportAware接口就可以获取到导入该配置类接口的数据配置
+		 *
+		 * 示例：
+		 * @Retention(RetentionPolicy.RUNTIME)
+		 * @Target({ElementType.TYPE})
+		 * @Import({RedissonHttpSessionConfiguration.class})
+		 * @Configuration
+		 * public @interface EnableRedissonHttpSession {
+		 *     int maxInactiveIntervalInSeconds() default 1800;
+		 *     String keyPrefix() default "";
+		 * }
+		 *
+		 * @Configuration
+		 * public class RedissonHttpSessionConfiguration extends SpringHttpSessionConfiguration implements ImportAware {
+		 *     private Integer maxInactiveIntervalInSeconds;
+		 *     private String keyPrefix;
+		 *
+		 * ...
+		 *     public void setImportMetadata(AnnotationMetadata importMetadata) {
+		 *         Map<String, Object> map = importMetadata.getAnnotationAttributes(EnableRedissonHttpSession.class.getName());
+		 *         AnnotationAttributes attrs = AnnotationAttributes.fromMap(map);
+		 *         this.keyPrefix = attrs.getString("keyPrefix");
+		 *         this.maxInactiveIntervalInSeconds = (Integer)attrs.getNumber("maxInactiveIntervalInSeconds");
+		 *     }
+		 * }
+		 *
+		 */
 
 		private final BeanFactory beanFactory;
 

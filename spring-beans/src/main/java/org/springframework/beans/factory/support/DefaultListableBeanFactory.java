@@ -818,12 +818,21 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
 		// Trigger initialization of all non-lazy singleton beans...
+		// 触发所有非延迟加载单例beans的初始化，主要步骤为调用getBean
 		// 遍历初始化所有非懒加载单例Bean
 		for (String beanName : beanNames) {
 			// Bean定义公共的抽象类是AbstractBeanDefinition，普通的Bean在Spring加载Bean定义的时候，实例化出来的是GenericBeanDefinition
 			// 而Spring上下文包括实例化所有Bean用的AbstractBeanDefinition是RootBeanDefinition
 			// 这时候就使用getMergedLocalBeanDefinition方法做了一次转化，将非RootBeanDefinition转换为RootBeanDefinition以供后续操作。
 			// 注意如果当前BeanDefinition存在父BeanDefinition，会基于父BeanDefinition生成一个RootBeanDefinition,然后再将调用OverrideFrom子BeanDefinition的相关属性覆写进去。
+			// 合并父BeanDefinition(注：只存在于xml配置中)
+			// eg:
+			// <bean id="order" class="xxx">
+			// 	 <property name="name" value="parent"/>
+			// </bean>
+			// <bean id="childrenOrder" parent="order">
+			//   <property name="name" value="children"/>
+			// </bean>
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 
 			// 如果Bean不是抽象的，是单例的，不是懒加载的，则开始创建单例对象通过调用getBean(beanName)方法初始化

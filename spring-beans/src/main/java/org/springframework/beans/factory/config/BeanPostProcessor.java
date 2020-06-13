@@ -48,6 +48,7 @@ public interface BeanPostProcessor {
 	/**
 	 * BeanPostProcessor 的作用：
 	 * 在 Bean 完成实例化后，如果我们需要对其进行一些配置、增加一些自己的处理逻辑，那么请使用 BeanPostProcessor。
+	 * 可以插手bean的实例化过程，实例化之后，在bean没有被Spring的bean容器管理之前添加处理逻辑，经典场景：处理bean的生命周期回调，AOP，如@PostConstruct -> CommonAnnotationBeanPostProcessor
 	 *
 	 * BeanPostProcessor 可以理解为是 Spring 的一个工厂钩子（其实 Spring 提供一系列的钩子，如 Aware 、InitializingBean、DisposableBean），
 	 * 它是 Spring 提供的对象实例化阶段强有力的扩展点，允许 Spring 在实例化 bean 阶段对其进行定制化修改，

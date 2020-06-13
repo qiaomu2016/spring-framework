@@ -254,6 +254,16 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		// 另一种是未创建完成，但先预存到一个单独的缓存中，这种是针对可能存在循环引用的情况的处理。
 		// 如A引用B,B又引用了A,因而在初始化A时，A会先调用构造函数创建出一个实例，在依赖注入B之前，现将A实例缓存起来
 		// 然后在初始化A时，依赖注入阶段，会触发初始化B，B创建后需要依赖注入A时，先从缓存中获取A（这个时候的A是不完整的)，避免循环依赖的问题出现。
+		/*
+		 * 这个方法在初始化的时候会调用，在getBean的时候也会调用，为什么需要这么做呢？
+		 * 也就是说spring在初始化的时候先获取这个对象，判断这个对象是否被实例化好了(一般情况都是null，如果是lazy的，那么可能是非空的)
+		 * 从spring的bean容器中获取一个bean，由于spring中bean容器是一个map（singletonObjects），
+		 * 所以你可以理解getSingleton(beanName)等于beanMap.get(beanName)
+		 * 由于方法会在spring环境初始化的时候（就是对象被建的时候调用一次）调用一次，还在在getBean的时候调用一次
+		 * 所在在调试的时候需要特别注意，不能直接断了点在这里，需要先进入到 annotationConfigApplicationContext.getBean(IndexService.class)
+		 * 之后再断点，这样就确保了我们是在获取这个bean的时候调用的。
+		 * 需要说明的是：在初始化时候调用一般都是返回null
+		 */
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
@@ -319,6 +329,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 			// 如果不是仅仅做类型检查则是创建bean，这里需要记录
 			if (!typeCheckOnly) {
+				// 添加到alreadyCreated set集合当中，表示它已经创建过
 				markBeanAsCreated(beanName);
 			}
 

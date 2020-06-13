@@ -1195,6 +1195,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// 解析 bean ，将 bean 类名解析为 class 引用。
 		Class<?> beanClass = resolveBeanClass(mbd, beanName);
 
+		// 检测一个类的访问权限，Spring默认情况下对于非public的类是允许访问的
 		if (beanClass != null && !Modifier.isPublic(beanClass.getModifiers()) && !mbd.isNonPublicAccessAllowed()) {
 			throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 					"Bean class isn't public, and non-public access not allowed: " + beanClass.getName());
@@ -1206,12 +1207,17 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			return obtainFromSupplier(instanceSupplier, beanName);
 		}
 
+		// 如果工厂方法不为空，则通过工厂方法构建 bean 对象
+		// 主要用于xml配置：<bean id="dmzService" factory-method="getDmz"，返回的bean为getDmz方法返回的对象
 		// 使用 FactoryBean 的 factory-method 来创建，支持静态工厂和实例工厂
 		if (mbd.getFactoryMethodName() != null) {
 			return instantiateUsingFactoryMethod(beanName, mbd, args);
 		}
 
 		// Shortcut when re-creating the same bean...
+		// 当多次构建同一个bean时，可以使用这个shortcut，也就是说在不需要去推断应该使用哪种方式构造bean
+		// 比如在多次构建同一个prototype类型的bean时，就可以走此处的shortcut，这里的 resolved 和
+		// mbd.constructorArgumentsResolved将会在 bean 第一次实例化的过程中被设置。
 		boolean resolved = false;
 		boolean autowireNecessary = false;
 		if (args == null) {
@@ -1226,6 +1232,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 		// 已经解析好了，直接注入即可
 		if (resolved) {
+			// 通过构造方法自动装配的方式构造 bean 对象
 			// autowire 自动注入，调用构造函数自动注入
 			if (autowireNecessary) {
 				return autowireConstructor(beanName, mbd, null, null);
@@ -1238,7 +1245,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// 确定解析的构造函数
 		// Candidate constructors for autowiring?
-		// 主要是检查已经注册的 SmartInstantiationAwareBeanPostProcessor
+		// 主要是检查已经注册的 SmartInstantiationAwareBeanPostProcessor，注：如果只有默认的无参构造方法时，此处会返回null
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
 		// 有参数情况时，创建 Bean 。先利用参数个数，类型等，确定最精确匹配的构造方法。
 		if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
@@ -1649,7 +1656,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		PropertyDescriptor[] pds = bw.getPropertyDescriptors();
 		// 遍历 PropertyDescriptor 数组
 		for (PropertyDescriptor pd : pds) {
-			// 有可写方法 &&  依赖检测中没有被忽略 && pvs 不包含该属性名 &&  不是简单属性类型
+			// 有可写方法(setter方法)
+			// &&  依赖检测中没有被忽略
+			// && pvs 不包含该属性名（PropertyValues可以通过代码的方式添加属性，即自动装配不包含代码手动添加的属性）
+			// &&  不是简单属性类型 （如Enum、Class类型的属性不会进行自动装配）
 			if (pd.getWriteMethod() != null && !isExcludedFromDependencyCheck(pd) && !pvs.contains(pd.getName()) &&
 					!BeanUtils.isSimpleProperty(pd.getPropertyType())) {
 				// 添加到 result 中
